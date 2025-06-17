@@ -347,6 +347,11 @@ async def get_health_records(current_user: User = Depends(get_current_user)):
     
     records = await db.health_records.find(query).to_list(1000)
     
+    # Convert MongoDB ObjectId to string for serialization
+    for record in records:
+        if '_id' in record:
+            record['_id'] = str(record['_id'])
+            
     # Decrypt data for authorized users
     for record in records:
         if record.get("data", {}).get("encrypted"):
