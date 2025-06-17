@@ -377,6 +377,10 @@ async def get_health_record(record_id: str, current_user: User = Depends(get_cur
             detail="Record not found"
         )
     
+    # Convert MongoDB ObjectId to string for serialization
+    if '_id' in record:
+        record['_id'] = str(record['_id'])
+    
     # Check access permissions
     if (current_user.role != UserRole.ADMIN and 
         record["owner_id"] != current_user.id and 
