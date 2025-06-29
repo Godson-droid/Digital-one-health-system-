@@ -591,7 +591,7 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
   );
 };
 
-// MFA Setup Modal (updated for new API)
+// Fixed MFA Setup Modal
 const MFASetupModal = ({ onClose }) => {
   const [mfaData, setMfaData] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
@@ -623,6 +623,16 @@ const MFASetupModal = ({ onClose }) => {
     }
   };
 
+  // Extract the actual TOTP URI from the QR code data URL
+  const getTOTPUri = () => {
+    if (!mfaData?.manual_entry_key) return '';
+    
+    // Create the proper TOTP URI
+    const issuer = 'Digital One Health';
+    const accountName = 'user@digitalonehealth.com'; // You might want to use actual user email
+    return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${mfaData.manual_entry_key}&issuer=${encodeURIComponent(issuer)}&period=90`;
+  };
+
   if (!mfaData) {
     return (
       <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -643,23 +653,30 @@ const MFASetupModal = ({ onClose }) => {
               <p className="text-sm text-gray-600 mb-4">
                 Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
               </p>
-              <div className="flex justify-center">
-                <QRCode value={mfaData.qr_code} size={200} />
+              <div className="flex justify-center bg-white p-4 rounded-lg">
+                <QRCode 
+                  value={getTOTPUri()} 
+                  size={200}
+                  level="M"
+                />
               </div>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">
-                Or enter this code manually:
+                Or enter this code manually in your authenticator app:
               </p>
-              <code className="bg-gray-100 p-2 rounded text-sm break-all">
+              <div className="bg-gray-100 p-3 rounded text-sm font-mono break-all">
                 {mfaData.manual_entry_key}
-              </code>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                ⏱️ Time interval: 90 seconds
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">
                 Backup Codes (save these safely):
               </p>
-              <div className="bg-gray-100 p-2 rounded text-sm">
+              <div className="bg-gray-100 p-3 rounded text-sm font-mono">
                 {mfaData.backup_codes.map((code, index) => (
                   <div key={index}>{code}</div>
                 ))}
@@ -667,7 +684,7 @@ const MFASetupModal = ({ onClose }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Enter verification code (90 seconds window):
+                Enter verification code from your authenticator app:
               </label>
               <input
                 type="text"
@@ -675,7 +692,11 @@ const MFASetupModal = ({ onClose }) => {
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value)}
                 placeholder="Enter 6-digit code"
+                maxLength="6"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                ⚠️ Note: This app uses 90-second intervals instead of the standard 30 seconds
+              </p>
             </div>
             <div className="flex justify-end space-x-3 pt-4">
               <button
@@ -686,7 +707,7 @@ const MFASetupModal = ({ onClose }) => {
               </button>
               <button
                 onClick={enableMFA}
-                disabled={loading || !verificationCode}
+                disabled={loading || !verificationCode || verificationCode.length !== 6}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 {loading ? 'Enabling...' : 'Enable MFA'}

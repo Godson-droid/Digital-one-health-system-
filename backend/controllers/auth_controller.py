@@ -103,17 +103,24 @@ class AuthController:
         # Generate secret for MFA
         secret = pyotp.random_base32()
 
-        # Generate QR code
+        # Generate provisioning URI for TOTP
         totp = pyotp.TOTP(secret, interval=90)
         provisioning_uri = totp.provisioning_uri(
             name=current_user.email,
             issuer_name="Digital One Health"
         )
 
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        # Generate QR code from the provisioning URI (not data URL)
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
         qr.add_data(provisioning_uri)
         qr.make(fit=True)
 
+        # Create QR code image
         qr_image = qr.make_image(fill_color="black", back_color="white")
         buffer = BytesIO()
         qr_image.save(buffer, format='PNG')
