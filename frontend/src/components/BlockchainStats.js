@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Set backend URL with fallback
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const BlockchainStats = () => {
@@ -18,6 +19,7 @@ const BlockchainStats = () => {
       const response = await axios.get(`${API}/blockchain/stats`);
       setStats(response.data);
     } catch (error) {
+      console.error('Failed to fetch blockchain statistics:', error);
       toast.error('Failed to fetch blockchain statistics');
     } finally {
       setLoading(false);
@@ -35,6 +37,7 @@ const BlockchainStats = () => {
       }
       fetchBlockchainStats(); // Refresh stats
     } catch (error) {
+      console.error('Failed to verify blockchain integrity:', error);
       toast.error('Failed to verify blockchain integrity');
     } finally {
       setLoading(false);
@@ -61,9 +64,10 @@ const BlockchainStats = () => {
         <h3 className="text-lg font-medium text-gray-900">🔗 Blockchain Status</h3>
         <button
           onClick={verifyChainIntegrity}
-          className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+          disabled={loading}
+          className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded disabled:opacity-50"
         >
-          Verify Chain
+          {loading ? 'Verifying...' : 'Verify Chain'}
         </button>
       </div>
 
@@ -71,11 +75,11 @@ const BlockchainStats = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{stats.total_blocks}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.total_blocks || 0}</div>
               <div className="text-sm text-blue-800">Total Blocks</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">#{stats.latest_block_index}</div>
+              <div className="text-2xl font-bold text-green-600">#{stats.latest_block_index >= 0 ? stats.latest_block_index : 'N/A'}</div>
               <div className="text-sm text-green-800">Latest Block</div>
             </div>
           </div>
@@ -90,7 +94,7 @@ const BlockchainStats = () => {
               </span>
             </div>
             <div className="text-sm text-gray-600">
-              Difficulty: {stats.difficulty}
+              Difficulty: {stats.difficulty || 4}
             </div>
           </div>
 

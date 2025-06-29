@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+env_file = ROOT_DIR / '.env'
+
+# Only load .env if it exists
+if env_file.exists():
+    load_dotenv(env_file)
 
 # JWT Configuration
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')

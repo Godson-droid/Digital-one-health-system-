@@ -8,7 +8,8 @@ import BlockchainVerification from './components/BlockchainVerification';
 import BlockchainStats from './components/BlockchainStats';
 import './App.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Set backend URL with fallback
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 // Authentication Context
@@ -41,6 +42,7 @@ const AuthProvider = ({ children }) => {
           logout();
         }
       } catch (error) {
+        console.error('Token validation error:', error);
         logout();
       }
     }
@@ -100,8 +102,8 @@ const Navigation = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm">Welcome, {user.full_name}</span>
-            <span className="text-xs bg-blue-700 px-2 py-1 rounded">{user.role}</span>
+            <span className="text-sm">Welcome, {user?.full_name || 'User'}</span>
+            <span className="text-xs bg-blue-700 px-2 py-1 rounded">{user?.role || 'unknown'}</span>
             <div className="relative">
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
@@ -127,7 +129,7 @@ const Navigation = () => {
   );
 };
 
-// Login Component (unchanged)
+// Login Component
 const Login = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -147,6 +149,7 @@ const Login = () => {
       login(response.data);
       toast.success('Login successful!');
     } catch (error) {
+      console.error('Login error:', error);
       if (error.response?.data?.detail === 'MFA token required') {
         setNeedsMFA(true);
         toast.info('Please enter your MFA token');
@@ -215,9 +218,13 @@ const Login = () => {
             </button>
           </div>
           <div className="text-center">
-            <a href="/register" className="text-blue-600 hover:text-blue-500">
+            <button
+              type="button"
+              onClick={() => window.location.href = '/register'}
+              className="text-blue-600 hover:text-blue-500"
+            >
               Don't have an account? Register here
-            </a>
+            </button>
           </div>
         </form>
       </div>
@@ -225,7 +232,7 @@ const Login = () => {
   );
 };
 
-// Register Component (unchanged but with updated API endpoints)
+// Register Component
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -245,6 +252,7 @@ const Register = () => {
       toast.success('Registration successful! Please login.');
       window.location.href = '/login';
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error(error.response?.data?.detail || 'Registration failed');
     } finally {
       setLoading(false);
@@ -326,9 +334,13 @@ const Register = () => {
             </button>
           </div>
           <div className="text-center">
-            <a href="/login" className="text-blue-600 hover:text-blue-500">
+            <button
+              type="button"
+              onClick={() => window.location.href = '/login'}
+              className="text-blue-600 hover:text-blue-500"
+            >
               Already have an account? Login here
-            </a>
+            </button>
           </div>
         </form>
       </div>
@@ -344,6 +356,7 @@ const Dashboard = () => {
   const [showMFASetup, setShowMFASetup] = useState(false);
   const [showBlockchainVerification, setShowBlockchainVerification] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchHealthRecords();
@@ -351,10 +364,15 @@ const Dashboard = () => {
 
   const fetchHealthRecords = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${API}/health-records`);
-      setRecords(response.data);
+      setRecords(response.data || []);
     } catch (error) {
+      console.error('Failed to fetch health records:', error);
       toast.error('Failed to fetch health records');
+      setRecords([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -362,6 +380,10 @@ const Dashboard = () => {
     setSelectedRecordId(recordId);
     setShowBlockchainVerification(true);
   };
+
+  if (!user) {
+    return <div>Loading user data...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -399,53 +421,65 @@ const Dashboard = () => {
                 {user.role === 'admin' ? 'All system records' : 'Your accessible records'} - Secured with blockchain
               </p>
             </div>
-            <ul className="divide-y divide-gray-200">
-              {records.map((record) => (
-                <li key={record.id} className="px-4 py-4 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <span className="text-2xl">
-                          {record.record_type === 'human' ? '👤' : 
-                           record.record_type === 'animal' ? '🐕' : '🌱'}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-gray-900">{record.title}</p>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            record.is_public ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {record.is_public ? '🌍 Public' : '🔒 Private'}
-                          </span>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            record.is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {record.is_verified ? '🔗 Verified' : '⚠️ Unverified'}
+            
+            {loading ? (
+              <div className="px-4 py-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading records...</p>
+              </div>
+            ) : records.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-500">
+                No health records found. Create your first record to get started.
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {records.map((record) => (
+                  <li key={record.id} className="px-4 py-4 sm:px-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <span className="text-2xl">
+                            {record.record_type === 'human' ? '👤' : 
+                             record.record_type === 'animal' ? '🐕' : '🌱'}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">{record.description}</p>
-                        <p className="text-xs text-gray-400">
-                          Subject: {record.subject_name} | Type: {record.record_type}
-                        </p>
+                        <div className="ml-4">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-gray-900">{record.title}</p>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              record.is_public ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {record.is_public ? '🌍 Public' : '🔒 Private'}
+                            </span>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              record.is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {record.is_verified ? '🔗 Verified' : '⚠️ Unverified'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500">{record.description}</p>
+                          <p className="text-xs text-gray-400">
+                            Subject: {record.subject_name} | Type: {record.record_type}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          onClick={() => handleVerifyRecord(record.id)}
+                          className="text-blue-600 hover:text-blue-900 text-sm"
+                        >
+                          🔗 Verify
+                        </button>
+                        <button className="text-green-600 hover:text-green-900 text-sm">View</button>
+                        {(record.owner_id === user.id || user.role === 'admin') && (
+                          <button className="text-orange-600 hover:text-orange-900 text-sm">Edit</button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={() => handleVerifyRecord(record.id)}
-                        className="text-blue-600 hover:text-blue-900 text-sm"
-                      >
-                        🔗 Verify
-                      </button>
-                      <button className="text-green-600 hover:text-green-900 text-sm">View</button>
-                      {(record.owner_id === user.id || user.role === 'admin') && (
-                        <button className="text-orange-600 hover:text-orange-900 text-sm">Edit</button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
@@ -463,7 +497,7 @@ const Dashboard = () => {
   );
 };
 
-// Create Record Modal (updated for new API)
+// Create Record Modal
 const CreateRecordModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -471,7 +505,7 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
     record_type: 'human',
     subject_id: '',
     subject_name: '',
-    data: {},
+    data: { notes: '', vital_signs: '' },
     is_public: false
   });
   const [loading, setLoading] = useState(false);
@@ -481,14 +515,12 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${API}/health-records`, {
-        ...formData,
-        data: { notes: formData.data.notes || '', vital_signs: formData.data.vital_signs || '' }
-      });
+      await axios.post(`${API}/health-records`, formData);
       toast.success('Health record created and secured with blockchain!');
       onSuccess();
       onClose();
     } catch (error) {
+      console.error('Failed to create record:', error);
       toast.error(error.response?.data?.detail || 'Failed to create record');
     } finally {
       setLoading(false);
@@ -553,6 +585,18 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700">Notes</label>
+              <textarea
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                rows="2"
+                value={formData.data.notes}
+                onChange={(e) => setFormData({
+                  ...formData, 
+                  data: { ...formData.data, notes: e.target.value }
+                })}
+              />
+            </div>
+            <div>
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -591,11 +635,12 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
   );
 };
 
-// Fixed MFA Setup Modal
+// MFA Setup Modal
 const MFASetupModal = ({ onClose }) => {
   const [mfaData, setMfaData] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     setupMFA();
@@ -606,6 +651,7 @@ const MFASetupModal = ({ onClose }) => {
       const response = await axios.post(`${API}/auth/setup-mfa`);
       setMfaData(response.data);
     } catch (error) {
+      console.error('Failed to setup MFA:', error);
       toast.error('Failed to setup MFA');
     }
   };
@@ -617,19 +663,18 @@ const MFASetupModal = ({ onClose }) => {
       toast.success('MFA enabled successfully!');
       onClose();
     } catch (error) {
+      console.error('Failed to enable MFA:', error);
       toast.error('Invalid verification code');
     } finally {
       setLoading(false);
     }
   };
 
-  // Extract the actual TOTP URI from the QR code data URL
   const getTOTPUri = () => {
     if (!mfaData?.manual_entry_key) return '';
     
-    // Create the proper TOTP URI
     const issuer = 'Digital One Health';
-    const accountName = 'user@digitalonehealth.com'; // You might want to use actual user email
+    const accountName = user?.email || 'user@digitalonehealth.com';
     return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${mfaData.manual_entry_key}&issuer=${encodeURIComponent(issuer)}&period=90`;
   };
 
@@ -677,9 +722,9 @@ const MFASetupModal = ({ onClose }) => {
                 Backup Codes (save these safely):
               </p>
               <div className="bg-gray-100 p-3 rounded text-sm font-mono">
-                {mfaData.backup_codes.map((code, index) => (
+                {mfaData.backup_codes?.map((code, index) => (
                   <div key={index}>{code}</div>
-                ))}
+                )) || 'No backup codes available'}
               </div>
             </div>
             <div>

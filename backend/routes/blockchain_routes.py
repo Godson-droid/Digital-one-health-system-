@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any, List
 from ..services.blockchain_service import BlockchainService
 from ..controllers.auth_controller import AuthController

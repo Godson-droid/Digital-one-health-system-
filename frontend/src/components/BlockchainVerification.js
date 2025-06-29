@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Set backend URL with fallback
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const BlockchainVerification = ({ recordId, onClose }) => {
@@ -11,6 +12,11 @@ const BlockchainVerification = ({ recordId, onClose }) => {
   const [blockchainHistory, setBlockchainHistory] = useState([]);
 
   const verifyRecord = async () => {
+    if (!recordId) {
+      toast.error('No record ID provided');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.get(`${API}/health-records/${recordId}/verify`);
@@ -18,7 +24,7 @@ const BlockchainVerification = ({ recordId, onClose }) => {
       
       // Get blockchain history
       const historyResponse = await axios.get(`${API}/blockchain/record/${recordId}/history`);
-      setBlockchainHistory(historyResponse.data);
+      setBlockchainHistory(historyResponse.data || []);
       
       if (response.data.is_verified) {
         toast.success('Record integrity verified!');
@@ -26,7 +32,14 @@ const BlockchainVerification = ({ recordId, onClose }) => {
         toast.error('Record integrity check failed!');
       }
     } catch (error) {
+      console.error('Failed to verify record integrity:', error);
       toast.error('Failed to verify record integrity');
+      setVerificationResult({
+        record_id: recordId,
+        is_verified: false,
+        verified_at: new Date().toISOString(),
+        error: error.response?.data?.detail || 'Verification failed'
+      });
     } finally {
       setLoading(false);
     }
@@ -83,6 +96,11 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                     }`}>
                       Verified at: {new Date(verificationResult.verified_at).toLocaleString()}
                     </p>
+                    {verificationResult.error && (
+                      <p className="text-sm text-red-600 mt-1">
+                        Error: {verificationResult.error}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -90,42 +108,48 @@ const BlockchainVerification = ({ recordId, onClose }) => {
               {/* Blockchain History */}
               <div>
                 <h4 className="text-md font-medium text-gray-900 mb-3">📜 Blockchain History</h4>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {blockchainHistory.map((entry, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg border">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-900">
-                              Block #{entry.block_index}
-                            </span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              entry.is_valid 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {entry.is_valid ? '✓ Valid' : '✗ Invalid'}
-                            </span>
+                {blockchainHistory.length === 0 ? (
+                  <div className="bg-gray-50 p-4 rounded-lg border text-center text-gray-500">
+                    No blockchain history found for this record
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {blockchainHistory.map((entry, index) => (
+                      <div key={index} className="bg-gray-50 p-4 rounded-lg border">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-gray-900">
+                                Block #{entry.block_index}
+                              </span>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                entry.is_valid 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {entry.is_valid ? '✓ Valid' : '✗ Invalid'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Action: <span className="font-medium">{entry.action}</span>
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              User: <span className="font-medium">{entry.user_id}</span>
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Time: {new Date(entry.timestamp).toLocaleString()}
+                            </p>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Action: <span className="font-medium">{entry.action}</span>
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            User: <span className="font-medium">{entry.user_id}</span>
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Time: {new Date(entry.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500 font-mono break-all max-w-xs">
-                            Hash: {entry.hash.substring(0, 16)}...
-                          </p>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500 font-mono break-all max-w-xs">
+                              Hash: {entry.hash ? entry.hash.substring(0, 16) + '...' : 'N/A'}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Technical Details */}
@@ -142,7 +166,10 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                     <p className="text-blue-700">
                       <span className="font-medium">Blockchain Hash:</span><br />
                       <span className="font-mono text-xs">
-                        {verificationResult.blockchain_hash?.substring(0, 32)}...
+                        {verificationResult.blockchain_hash 
+                          ? verificationResult.blockchain_hash.substring(0, 32) + '...'
+                          : 'N/A'
+                        }
                       </span>
                     </p>
                   </div>
@@ -153,9 +180,10 @@ const BlockchainVerification = ({ recordId, onClose }) => {
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   onClick={verifyRecord}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  🔄 Re-verify
+                  {loading ? '🔄 Verifying...' : '🔄 Re-verify'}
                 </button>
                 <button
                   onClick={onClose}
@@ -168,6 +196,12 @@ const BlockchainVerification = ({ recordId, onClose }) => {
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-600">No verification data available</p>
+              <button
+                onClick={verifyRecord}
+                className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              >
+                Start Verification
+              </button>
             </div>
           )}
         </div>
