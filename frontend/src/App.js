@@ -12,6 +12,21 @@ import './App.css';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
+// Configure axios defaults
+axios.defaults.timeout = 10000;
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error);
+    if (error.code === 'ECONNABORTED') {
+      toast.error('Request timeout - please try again');
+    } else if (error.response?.status === 500) {
+      toast.error('Server error - please try again later');
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Authentication Context
 const AuthContext = React.createContext();
 
@@ -35,8 +50,8 @@ const AuthProvider = ({ children }) => {
       // Decode token to get user info
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        const userData = JSON.parse(localStorage.getItem('user'));
-        if (userData && payload.exp > Date.now() / 1000) {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        if (userData && userData.id && payload.exp > Date.now() / 1000) {
           setUser(userData);
         } else {
           logout();
@@ -50,11 +65,16 @@ const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = (tokenData) => {
-    setToken(tokenData.access_token);
-    setUser(tokenData.user);
-    localStorage.setItem('token', tokenData.access_token);
-    localStorage.setItem('user', JSON.stringify(tokenData.user));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${tokenData.access_token}`;
+    try {
+      setToken(tokenData.access_token);
+      setUser(tokenData.user);
+      localStorage.setItem('token', tokenData.access_token);
+      localStorage.setItem('user', JSON.stringify(tokenData.user));
+      axios.defaults.headers.common['Authorization'] = `Bearer ${tokenData.access_token}`;
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed');
+    }
   };
 
   const logout = () => {
@@ -91,6 +111,8 @@ const Navigation = () => {
   const { user, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
+  if (!user) return null;
+
   return (
     <nav className="bg-blue-900 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -114,7 +136,10 @@ const Navigation = () => {
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                   <button
-                    onClick={logout}
+                    onClick={() => {
+                      logout();
+                      setShowDropdown(false);
+                    }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     Logout
@@ -366,7 +391,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/health-records`);
-      setRecords(response.data || []);
+      setRecords(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Failed to fetch health records:', error);
       toast.error('Failed to fetch health records');
@@ -377,12 +402,16 @@ const Dashboard = () => {
   };
 
   const handleVerifyRecord = (recordId) => {
-    setSelectedRecordId(recordId);
-    setShowBlockchainVerification(true);
+    if (recordId) {
+      setSelectedRecordId(recordId);
+      setShowBlockchainVerification(true);
+    }
   };
 
   if (!user) {
-    return <div>Loading user data...</div>;
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>;
   }
 
   return (
@@ -445,7 +474,7 @@ const Dashboard = () => {
                         </div>
                         <div className="ml-4">
                           <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium text-gray-900">{record.title}</p>
+                            <p className="text-sm font-medium text-gray-900">{record.title || 'Untitled Record'}</p>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               record.is_public ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
@@ -457,9 +486,9 @@ const Dashboard = () => {
                               {record.is_verified ? '🔗 Verified' : '⚠️ Unverified'}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-500">{record.description}</p>
+                          <p className="text-sm text-gray-500">{record.description || 'No description'}</p>
                           <p className="text-xs text-gray-400">
-                            Subject: {record.subject_name} | Type: {record.record_type}
+                            Subject: {record.subject_name || 'Unknown'} | Type: {record.record_type || 'Unknown'}
                           </p>
                         </div>
                       </div>

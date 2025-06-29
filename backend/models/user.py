@@ -17,6 +17,7 @@ class UserInDB(UserBase):
     is_active: bool = True
     mfa_enabled: bool = False
     mfa_secret: Optional[str] = None
+    backup_codes: Optional[List[str]] = None
     hashed_password: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

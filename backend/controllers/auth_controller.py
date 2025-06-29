@@ -24,137 +24,170 @@ class AuthController:
 
     async def register_user(self, user_data: UserCreate) -> dict:
         """Register a new user"""
-        # Check if user exists
-        existing_user = await self.user_service.get_user_by_username_or_email(
-            user_data.username, user_data.email
-        )
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User already exists"
+        try:
+            # Check if user exists
+            existing_user = await self.user_service.get_user_by_username_or_email(
+                user_data.username, user_data.email
             )
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User already exists"
+                )
 
-        # Validate role
-        valid_roles = ["admin", "healthcare_provider", "researcher", "individual"]
-        if user_data.role not in valid_roles:
+            # Validate role
+            valid_roles = ["admin", "healthcare_provider", "researcher", "individual"]
+            if user_data.role not in valid_roles:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid role"
+                )
+
+            # Create user
+            hashed_password = get_password_hash(user_data.password)
+            user = await self.user_service.create_user(user_data, hashed_password)
+            
+            # Log user creation to blockchain
+            try:
+                await self.blockchain_service.add_block(
+                    record_id=user.id,
+                    action="user_created",
+                    data_hash=self.blockchain_service.calculate_hash(user.dict()),
+                    user_id=user.id
+                )
+            except Exception as e:
+                print(f"Warning: Failed to log user creation to blockchain: {e}")
+
+            return {"message": "User registered successfully", "user_id": user.id}
+        except HTTPException:
+            raise
+        except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid role"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Registration failed: {str(e)}"
             )
-
-        # Create user
-        hashed_password = get_password_hash(user_data.password)
-        user = await self.user_service.create_user(user_data, hashed_password)
-        
-        # Log user creation to blockchain
-        await self.blockchain_service.add_block(
-            record_id=user.id,
-            action="user_created",
-            data_hash=self.blockchain_service.calculate_hash(user.dict()),
-            user_id=user.id
-        )
-
-        return {"message": "User registered successfully", "user_id": user.id}
 
     async def login_user(self, login_data: UserLogin) -> Token:
         """Authenticate user and return token"""
-        user = await self.user_service.get_user_by_username(login_data.username)
-        if not user or not verify_password(login_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password"
+        try:
+            user = await self.user_service.get_user_by_username(login_data.username)
+            if not user or not verify_password(login_data.password, user.hashed_password):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect username or password"
+                )
+
+            # Check MFA if enabled
+            if user.mfa_enabled:
+                if not login_data.mfa_token:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="MFA token required"
+                    )
+                if not verify_mfa_token(user.mfa_secret, login_data.mfa_token):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid MFA token"
+                    )
+
+            # Create access token
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user.username}, expires_delta=access_token_expires
             )
 
-        # Check MFA if enabled
-        if user.mfa_enabled:
-            if not login_data.mfa_token:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="MFA token required"
-                )
-            if not verify_mfa_token(user.mfa_secret, login_data.mfa_token):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid MFA token"
-                )
+            user_info = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+                "full_name": user.full_name
+            }
 
-        # Create access token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.username}, expires_delta=access_token_expires
-        )
-
-        user_info = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,
-            "full_name": user.full_name
-        }
-
-        return Token(
-            access_token=access_token,
-            token_type="bearer",
-            user=user_info
-        )
+            return Token(
+                access_token=access_token,
+                token_type="bearer",
+                user=user_info
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Login failed: {str(e)}"
+            )
 
     async def setup_mfa(self, current_user: User) -> MFASetup:
         """Setup MFA for user"""
-        # Generate secret for MFA
-        secret = pyotp.random_base32()
+        try:
+            # Generate secret for MFA
+            secret = pyotp.random_base32()
 
-        # Generate provisioning URI for TOTP
-        totp = pyotp.TOTP(secret, interval=90)
-        provisioning_uri = totp.provisioning_uri(
-            name=current_user.email,
-            issuer_name="Digital One Health"
-        )
+            # Generate provisioning URI for TOTP
+            totp = pyotp.TOTP(secret, interval=90)
+            provisioning_uri = totp.provisioning_uri(
+                name=current_user.email,
+                issuer_name="Digital One Health"
+            )
 
-        # Generate QR code from the provisioning URI (not data URL)
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(provisioning_uri)
-        qr.make(fit=True)
+            # Generate QR code from the provisioning URI
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(provisioning_uri)
+            qr.make(fit=True)
 
-        # Create QR code image
-        qr_image = qr.make_image(fill_color="black", back_color="white")
-        buffer = BytesIO()
-        qr_image.save(buffer, format='PNG')
-        qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+            # Create QR code image
+            qr_image = qr.make_image(fill_color="black", back_color="white")
+            buffer = BytesIO()
+            qr_image.save(buffer, format='PNG')
+            qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # Generate backup codes
-        backup_codes = [str(uuid.uuid4())[:8] for _ in range(5)]
+            # Generate backup codes
+            backup_codes = [str(uuid.uuid4())[:8] for _ in range(5)]
 
-        # Save MFA secret to user
-        await self.user_service.update_mfa_secret(current_user.id, secret, backup_codes)
+            # Save MFA secret to user
+            await self.user_service.update_mfa_secret(current_user.id, secret, backup_codes)
 
-        return MFASetup(
-            qr_code=f"data:image/png;base64,{qr_code_base64}",
-            manual_entry_key=secret,
-            backup_codes=backup_codes
-        )
+            return MFASetup(
+                qr_code=f"data:image/png;base64,{qr_code_base64}",
+                manual_entry_key=secret,
+                backup_codes=backup_codes
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"MFA setup failed: {str(e)}"
+            )
 
     async def enable_mfa(self, mfa_token: str, current_user: User) -> dict:
         """Enable MFA for user"""
-        user = await self.user_service.get_user_by_id(current_user.id)
-        if not user.mfa_secret:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MFA not set up"
-            )
+        try:
+            user = await self.user_service.get_user_by_id(current_user.id)
+            if not user or not user.mfa_secret:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="MFA not set up"
+                )
 
-        if not verify_mfa_token(user.mfa_secret, mfa_token):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid MFA token"
-            )
+            if not verify_mfa_token(user.mfa_secret, mfa_token):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid MFA token"
+                )
 
-        await self.user_service.enable_mfa(current_user.id)
-        return {"message": "MFA enabled successfully"}
+            await self.user_service.enable_mfa(current_user.id)
+            return {"message": "MFA enabled successfully"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"MFA enable failed: {str(e)}"
+            )
 
     async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
         """Get current authenticated user"""

@@ -9,6 +9,7 @@ const API = `${BACKEND_URL}/api`;
 const BlockchainStats = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     fetchBlockchainStats();
@@ -16,21 +17,28 @@ const BlockchainStats = () => {
 
   const fetchBlockchainStats = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${API}/blockchain/stats`);
-      setStats(response.data);
+      setStats(response.data || {});
     } catch (error) {
       console.error('Failed to fetch blockchain statistics:', error);
       toast.error('Failed to fetch blockchain statistics');
+      setStats({
+        total_blocks: 0,
+        latest_block_index: -1,
+        chain_integrity: false,
+        difficulty: 4
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const verifyChainIntegrity = async () => {
-    setLoading(true);
+    setVerifying(true);
     try {
       const response = await axios.get(`${API}/blockchain/verify-chain`);
-      if (response.data.chain_integrity) {
+      if (response.data?.chain_integrity) {
         toast.success('Blockchain integrity verified!');
       } else {
         toast.error('Blockchain integrity check failed!');
@@ -40,7 +48,7 @@ const BlockchainStats = () => {
       console.error('Failed to verify blockchain integrity:', error);
       toast.error('Failed to verify blockchain integrity');
     } finally {
-      setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -64,10 +72,10 @@ const BlockchainStats = () => {
         <h3 className="text-lg font-medium text-gray-900">🔗 Blockchain Status</h3>
         <button
           onClick={verifyChainIntegrity}
-          disabled={loading}
+          disabled={verifying}
           className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded disabled:opacity-50"
         >
-          {loading ? 'Verifying...' : 'Verify Chain'}
+          {verifying ? 'Verifying...' : 'Verify Chain'}
         </button>
       </div>
 

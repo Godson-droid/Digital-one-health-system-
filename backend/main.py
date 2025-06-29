@@ -32,9 +32,13 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth_routes.router, prefix="/api")
-app.include_router(health_record_routes.router, prefix="/api")
-app.include_router(blockchain_routes.router, prefix="/api")
+try:
+    app.include_router(auth_routes.router, prefix="/api")
+    app.include_router(health_record_routes.router, prefix="/api")
+    app.include_router(blockchain_routes.router, prefix="/api")
+    logger.info("All routes loaded successfully")
+except Exception as e:
+    logger.error(f"Error loading routes: {e}")
 
 # Legacy endpoints for backward compatibility
 @app.get("/api/dashboard/stats")
@@ -63,11 +67,26 @@ async def system_status():
         }
     }
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize application on startup"""
+    try:
+        logger.info("Digital One Health System v2.0 starting up...")
+        # Test database connection
+        from .database import get_database
+        await get_database()
+        logger.info("Application startup complete")
+    except Exception as e:
+        logger.error(f"Startup error: {e}")
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    await close_database()
-    logger.info("Application shutdown complete")
+    try:
+        await close_database()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -20,13 +20,18 @@ const BlockchainVerification = ({ recordId, onClose }) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API}/health-records/${recordId}/verify`);
-      setVerificationResult(response.data);
+      setVerificationResult(response.data || {});
       
       // Get blockchain history
-      const historyResponse = await axios.get(`${API}/blockchain/record/${recordId}/history`);
-      setBlockchainHistory(historyResponse.data || []);
+      try {
+        const historyResponse = await axios.get(`${API}/blockchain/record/${recordId}/history`);
+        setBlockchainHistory(Array.isArray(historyResponse.data) ? historyResponse.data : []);
+      } catch (historyError) {
+        console.error('Failed to get blockchain history:', historyError);
+        setBlockchainHistory([]);
+      }
       
-      if (response.data.is_verified) {
+      if (response.data?.is_verified) {
         toast.success('Record integrity verified!');
       } else {
         toast.error('Record integrity check failed!');
@@ -45,7 +50,7 @@ const BlockchainVerification = ({ recordId, onClose }) => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (recordId) {
       verifyRecord();
     }
@@ -94,7 +99,7 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                     <p className={`text-sm ${
                       verificationResult.is_verified ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      Verified at: {new Date(verificationResult.verified_at).toLocaleString()}
+                      Verified at: {verificationResult.verified_at ? new Date(verificationResult.verified_at).toLocaleString() : 'Unknown'}
                     </p>
                     {verificationResult.error && (
                       <p className="text-sm text-red-600 mt-1">
@@ -120,7 +125,7 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                           <div className="flex-1">
                             <div className="flex items-center space-x-2">
                               <span className="font-medium text-gray-900">
-                                Block #{entry.block_index}
+                                Block #{entry.block_index || 'Unknown'}
                               </span>
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 entry.is_valid 
@@ -131,13 +136,13 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                               </span>
                             </div>
                             <p className="text-sm text-gray-600 mt-1">
-                              Action: <span className="font-medium">{entry.action}</span>
+                              Action: <span className="font-medium">{entry.action || 'Unknown'}</span>
                             </p>
                             <p className="text-sm text-gray-600">
-                              User: <span className="font-medium">{entry.user_id}</span>
+                              User: <span className="font-medium">{entry.user_id || 'Unknown'}</span>
                             </p>
                             <p className="text-sm text-gray-600">
-                              Time: {new Date(entry.timestamp).toLocaleString()}
+                              Time: {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown'}
                             </p>
                           </div>
                           <div className="text-right">
@@ -159,7 +164,7 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                   <div>
                     <p className="text-blue-700">
                       <span className="font-medium">Record ID:</span><br />
-                      <span className="font-mono text-xs">{verificationResult.record_id}</span>
+                      <span className="font-mono text-xs">{verificationResult.record_id || 'Unknown'}</span>
                     </p>
                   </div>
                   <div>
