@@ -4,6 +4,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import QRCode from 'react-qr-code';
 import axios from 'axios';
+import BlockchainVerification from './components/BlockchainVerification';
+import BlockchainStats from './components/BlockchainStats';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -93,7 +95,8 @@ const Navigation = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold">🌍 Digital One Health</h1>
+              <h1 className="text-xl font-bold">🌍 Digital One Health v2.0</h1>
+              <p className="text-xs text-blue-200">MVC + Blockchain Architecture</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -124,7 +127,7 @@ const Navigation = () => {
   );
 };
 
-// Login Component
+// Login Component (unchanged)
 const Login = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -160,10 +163,10 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            🌍 Digital One Health
+            🌍 Digital One Health v2.0
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Secure health data management system
+            Secure health data with blockchain integrity
           </p>
         </div>
         <form className="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md" onSubmit={handleSubmit}>
@@ -222,7 +225,7 @@ const Login = () => {
   );
 };
 
-// Register Component
+// Register Component (unchanged but with updated API endpoints)
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -333,29 +336,31 @@ const Register = () => {
   );
 };
 
-// Dashboard Component
+// Enhanced Dashboard Component
 const Dashboard = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({});
   const [records, setRecords] = useState([]);
   const [showCreateRecord, setShowCreateRecord] = useState(false);
   const [showMFASetup, setShowMFASetup] = useState(false);
+  const [showBlockchainVerification, setShowBlockchainVerification] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchHealthRecords();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchHealthRecords = async () => {
     try {
-      const [statsResponse, recordsResponse] = await Promise.all([
-        axios.get(`${API}/dashboard/stats`),
-        axios.get(`${API}/health-records`)
-      ]);
-      setStats(statsResponse.data);
-      setRecords(recordsResponse.data);
+      const response = await axios.get(`${API}/health-records`);
+      setRecords(response.data);
     } catch (error) {
-      toast.error('Failed to fetch dashboard data');
+      toast.error('Failed to fetch health records');
     }
+  };
+
+  const handleVerifyRecord = (recordId) => {
+    setSelectedRecordId(recordId);
+    setShowBlockchainVerification(true);
   };
 
   return (
@@ -363,31 +368,9 @@ const Dashboard = () => {
       <Navigation />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-            {Object.entries(stats).map(([key, value]) => (
-              <div key={key} className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">
-                          {key.includes('user') ? '👥' : '📊'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </dt>
-                        <dd className="text-lg font-medium text-gray-900">{value}</dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* Blockchain Stats */}
+          <div className="mb-8">
+            <BlockchainStats />
           </div>
 
           {/* Action Buttons */}
@@ -413,7 +396,7 @@ const Dashboard = () => {
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">Health Records</h3>
               <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                {user.role === 'admin' ? 'All system records' : 'Your accessible records'}
+                {user.role === 'admin' ? 'All system records' : 'Your accessible records'} - Secured with blockchain
               </p>
             </div>
             <ul className="divide-y divide-gray-200">
@@ -428,12 +411,17 @@ const Dashboard = () => {
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-2">
                           <p className="text-sm font-medium text-gray-900">{record.title}</p>
-                          <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             record.is_public ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
                             {record.is_public ? '🌍 Public' : '🔒 Private'}
+                          </span>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            record.is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {record.is_verified ? '🔗 Verified' : '⚠️ Unverified'}
                           </span>
                         </div>
                         <p className="text-sm text-gray-500">{record.description}</p>
@@ -443,9 +431,15 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900 text-sm">View</button>
+                      <button 
+                        onClick={() => handleVerifyRecord(record.id)}
+                        className="text-blue-600 hover:text-blue-900 text-sm"
+                      >
+                        🔗 Verify
+                      </button>
+                      <button className="text-green-600 hover:text-green-900 text-sm">View</button>
                       {(record.owner_id === user.id || user.role === 'admin') && (
-                        <button className="text-green-600 hover:text-green-900 text-sm">Edit</button>
+                        <button className="text-orange-600 hover:text-orange-900 text-sm">Edit</button>
                       )}
                     </div>
                   </div>
@@ -457,13 +451,19 @@ const Dashboard = () => {
       </div>
 
       {/* Modals */}
-      {showCreateRecord && <CreateRecordModal onClose={() => setShowCreateRecord(false)} onSuccess={fetchDashboardData} />}
+      {showCreateRecord && <CreateRecordModal onClose={() => setShowCreateRecord(false)} onSuccess={fetchHealthRecords} />}
       {showMFASetup && <MFASetupModal onClose={() => setShowMFASetup(false)} />}
+      {showBlockchainVerification && (
+        <BlockchainVerification 
+          recordId={selectedRecordId} 
+          onClose={() => setShowBlockchainVerification(false)} 
+        />
+      )}
     </div>
   );
 };
 
-// Create Record Modal
+// Create Record Modal (updated for new API)
 const CreateRecordModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -485,7 +485,7 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
         ...formData,
         data: { notes: formData.data.notes || '', vital_signs: formData.data.vital_signs || '' }
       });
-      toast.success('Health record created successfully!');
+      toast.success('Health record created and secured with blockchain!');
       onSuccess();
       onClose();
     } catch (error) {
@@ -563,6 +563,11 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
                 <span className="text-sm text-gray-700">Make this record public</span>
               </label>
             </div>
+            <div className="bg-blue-50 p-3 rounded-md">
+              <p className="text-xs text-blue-800">
+                🔗 This record will be secured with blockchain technology for tamper-proof integrity
+              </p>
+            </div>
             <div className="flex justify-end space-x-3 pt-4">
               <button
                 type="button"
@@ -576,7 +581,7 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? 'Creating...' : 'Create'}
+                {loading ? 'Creating...' : 'Create & Secure'}
               </button>
             </div>
           </form>
@@ -586,7 +591,7 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
   );
 };
 
-// MFA Setup Modal
+// MFA Setup Modal (updated for new API)
 const MFASetupModal = ({ onClose }) => {
   const [mfaData, setMfaData] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
