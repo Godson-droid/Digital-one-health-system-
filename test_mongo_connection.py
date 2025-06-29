@@ -1,5 +1,6 @@
 import os
 import sys
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
@@ -25,7 +26,7 @@ else:
     else:
         logger.warning(f"No .env file found at {env_file} or {current_env}")
 
-def test_mongodb_connection():
+async def test_mongodb_connection():
     """Basic MongoDB connection test compatible with WebContainer"""
     try:
         # Get connection details from environment
@@ -184,7 +185,8 @@ def check_backend_files():
     print()
     return all_files_exist
 
-if __name__ == "__main__":
+async def main():
+    """Main async function to run the test"""
     print("Starting MongoDB connection test (WebContainer compatible)...")
     
     # Check environment first
@@ -195,15 +197,23 @@ if __name__ == "__main__":
     
     if not files_ok:
         print("❌ Some required backend files are missing!")
-        sys.exit(1)
+        return False
     
     # Run connection test
-    success = test_mongodb_connection()
+    success = await test_mongodb_connection()
     
     if success:
         print("\n✅ MongoDB configuration appears to be correct!")
         print("Note: Run the backend server to test actual database connectivity.")
-        sys.exit(0)
+        return True
     else:
         print("\n❌ MongoDB configuration test failed!")
+        return False
+
+if __name__ == "__main__":
+    try:
+        success = asyncio.run(main())
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"❌ Error running test: {e}")
         sys.exit(1)
