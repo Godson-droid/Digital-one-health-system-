@@ -4,6 +4,7 @@ from datetime import datetime
 
 from ..models.user import UserCreate, UserInDB, User
 from ..database import get_database
+from ..utils.security import get_password_hash
 
 class UserService:
     def __init__(self):
@@ -63,6 +64,46 @@ class UserService:
             return UserInDB(**user_data) if user_data else None
         except Exception as e:
             print(f"Error checking user existence: {e}")
+            return None
+
+    async def get_admin_user(self) -> Optional[UserInDB]:
+        """Get the admin user (should only be one)"""
+        try:
+            db = await self.get_db()
+            user_data = await db.users.find_one({"role": "admin"})
+            return UserInDB(**user_data) if user_data else None
+        except Exception as e:
+            print(f"Error getting admin user: {e}")
+            return None
+
+    async def create_default_admin(self) -> Optional[UserInDB]:
+        """Create default admin user if none exists"""
+        try:
+            # Check if admin already exists
+            existing_admin = await self.get_admin_user()
+            if existing_admin:
+                return existing_admin
+
+            # Create default admin
+            admin_data = UserCreate(
+                username="admin",
+                email="admin@digitalonehealth.com",
+                password="Admin123!",
+                role="admin",
+                full_name="System Administrator"
+            )
+            
+            hashed_password = get_password_hash(admin_data.password)
+            admin_user = await self.create_user(admin_data, hashed_password)
+            
+            print("✅ Default admin user created:")
+            print(f"   Username: admin")
+            print(f"   Password: Admin123!")
+            print(f"   Email: admin@digitalonehealth.com")
+            
+            return admin_user
+        except Exception as e:
+            print(f"Error creating default admin: {e}")
             return None
 
     async def update_mfa_secret(self, user_id: str, secret: str, backup_codes: List[str]) -> bool:

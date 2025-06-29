@@ -6,6 +6,7 @@ from pathlib import Path
 from .routes import auth_routes, health_record_routes, blockchain_routes
 from .database import close_database
 from .config import DEBUG, CORS_ORIGINS
+from .services.user_service import UserService
 
 # Configure logging
 logging.basicConfig(
@@ -63,7 +64,8 @@ async def system_status():
             "encryption": "AES-256 enabled",
             "mfa": "TOTP 90-second window",
             "blockchain": "Proof of Work enabled",
-            "database": "MongoDB connected"
+            "database": "MongoDB connected",
+            "admin_policy": "Single admin enforced"
         }
     }
 
@@ -72,9 +74,20 @@ async def startup_event():
     """Initialize application on startup"""
     try:
         logger.info("Digital One Health System v2.0 starting up...")
+        
         # Test database connection
         from .database import get_database
         await get_database()
+        logger.info("Database connection established")
+        
+        # Create default admin user if none exists
+        user_service = UserService()
+        admin_user = await user_service.create_default_admin()
+        if admin_user:
+            logger.info("Default admin user setup completed")
+        else:
+            logger.info("Admin user already exists or creation failed")
+        
         logger.info("Application startup complete")
     except Exception as e:
         logger.error(f"Startup error: {e}")
