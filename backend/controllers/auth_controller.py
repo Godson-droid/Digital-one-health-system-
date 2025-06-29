@@ -23,7 +23,7 @@ class AuthController:
         self.blockchain_service = BlockchainService()
 
     async def register_user(self, user_data: UserCreate) -> dict:
-        """Register a new user"""
+        """Register a new user with admin restriction"""
         try:
             # Check if user exists
             existing_user = await self.user_service.get_user_by_username_or_email(
@@ -42,6 +42,15 @@ class AuthController:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid role"
                 )
+
+            # Enforce single admin rule
+            if user_data.role == "admin":
+                existing_admin = await self.user_service.get_admin_user()
+                if existing_admin:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="An admin user already exists. Only one admin is allowed."
+                    )
 
             # Create user
             hashed_password = get_password_hash(user_data.password)
