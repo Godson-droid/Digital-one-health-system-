@@ -30,4 +30,4 @@ MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '90'))  # seconds
 
 # Application Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'https://digital-one-health-system-1.onrender.com').split(',')
+CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'https://digital-one-health-system.vercel.app').split(',')
