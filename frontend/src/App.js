@@ -995,6 +995,7 @@ const MFASetupModal = ({ onClose }) => {
                 {mfaData.backup_codes?.map((code, index) => (
                   <code key={index} className="text-xs font-mono bg-white p-2 rounded border">{code}</code>
                 )) || <p className="text-sm text-gray-500">No backup codes available</p>}
+                }
               </div>
             </div>
           </div>
@@ -1055,8 +1056,11 @@ function App() {
         <div className="App">
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            }
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+            }
             <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            }
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <ToastContainer 
