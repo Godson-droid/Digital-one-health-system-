@@ -94,9 +94,14 @@ const AuthProvider = ({ children }) => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-    </div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="loading-spinner mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading application...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -106,43 +111,75 @@ const AuthProvider = ({ children }) => {
   );
 };
 
-// Navigation Component
+// Professional Navigation Component
 const Navigation = () => {
   const { user, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
   if (!user) return null;
 
+  const getRoleColor = (role) => {
+    const colors = {
+      admin: 'bg-purple-100 text-purple-800',
+      healthcare_provider: 'bg-blue-100 text-blue-800',
+      researcher: 'bg-green-100 text-green-800',
+      individual: 'bg-gray-100 text-gray-800'
+    };
+    return colors[role] || colors.individual;
+  };
+
   return (
-    <nav className="bg-blue-900 text-white shadow-lg">
+    <nav className="professional-nav">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold">🌍 Digital One Health v2.0</h1>
-              <p className="text-xs text-blue-200">MVC + Blockchain Architecture</p>
+        <div className="flex justify-between items-center h-16">
+          <div className="nav-brand">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold">🏥</span>
+              </div>
+              <div>
+                <div className="text-white font-bold text-lg">Digital One Health</div>
+                <div className="nav-subtitle">Secure Health Data Platform</div>
+              </div>
             </div>
           </div>
+          
           <div className="flex items-center space-x-4">
-            <span className="text-sm">Welcome, {user?.full_name || 'User'}</span>
-            <span className="text-xs bg-blue-700 px-2 py-1 rounded">{user?.role || 'unknown'}</span>
+            <div className="hidden md:flex items-center space-x-3">
+              <span className="text-white text-sm">Welcome, {user?.full_name || 'User'}</span>
+              <span className={`status-badge ${getRoleColor(user?.role)}`}>
+                {user?.role?.replace('_', ' ') || 'unknown'}
+              </span>
+            </div>
+            
             <div className="relative">
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="bg-blue-800 hover:bg-blue-700 px-3 py-2 rounded text-sm"
+                className="btn-professional btn-secondary text-white border-white border-opacity-20 hover:bg-white hover:bg-opacity-10"
               >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
                 Menu
               </button>
+              
               {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
+                  <div className="md:hidden px-4 py-2 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                    <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
+                  </div>
                   <button
                     onClick={() => {
                       logout();
                       setShowDropdown(false);
                     }}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    Logout
+                    <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
                   </button>
                 </div>
               )}
@@ -154,7 +191,7 @@ const Navigation = () => {
   );
 };
 
-// Login Component
+// Professional Login Component
 const Login = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -172,7 +209,7 @@ const Login = () => {
     try {
       const response = await axios.post(`${API}/auth/login`, formData);
       login(response.data);
-      toast.success('Login successful!');
+      toast.success('Welcome to Digital One Health!');
     } catch (error) {
       console.error('Login error:', error);
       if (error.response?.data?.detail === 'MFA token required') {
@@ -187,77 +224,102 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            🌍 Digital One Health v2.0
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mb-6">
+            <span className="text-2xl text-white">🏥</span>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Digital One Health
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Secure health data with blockchain integrity
+          <p className="text-gray-600">
+            Secure health data management with blockchain integrity
           </p>
         </div>
-        <form className="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        
+        <div className="professional-card p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Username</label>
+              <label className="form-label-professional">Username</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
+                placeholder="Enter your username"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="form-label-professional">Password</label>
               <input
                 type="password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="Enter your password"
               />
             </div>
+            
             {needsMFA && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">MFA Token (90 seconds)</label>
+              <div className="fade-in">
+                <label className="form-label-professional">
+                  Multi-Factor Authentication Code
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="Enter 6-digit code"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="form-input-professional"
                   value={formData.mfa_token}
                   onChange={(e) => setFormData({...formData, mfa_token: e.target.value})}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  ⏱️ Note: This system uses 90-second intervals
+                </p>
               </div>
             )}
-          </div>
-          <div>
+            
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="btn-professional btn-primary w-full"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? (
+                <>
+                  <div className="loading-spinner w-4 h-4"></div>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m0 0v3a2 2 0 002 2h6a2 2 0 002-2v-6a2 2 0 00-2-2h-3" />
+                  </svg>
+                  Sign In
+                </>
+              )}
             </button>
-          </div>
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => window.location.href = '/register'}
-              className="text-blue-600 hover:text-blue-500"
-            >
-              Don't have an account? Register here
-            </button>
-          </div>
-        </form>
+            
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => window.location.href = '/register'}
+                className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+              >
+                Don't have an account? Create one here
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
 
-// Register Component
+// Professional Register Component
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -274,7 +336,7 @@ const Register = () => {
 
     try {
       await axios.post(`${API}/auth/register`, formData);
-      toast.success('Registration successful! Please login.');
+      toast.success('Account created successfully! Please sign in.');
       window.location.href = '/login';
     } catch (error) {
       console.error('Registration error:', error);
@@ -284,96 +346,131 @@ const Register = () => {
     }
   };
 
+  const roleOptions = [
+    { value: 'individual', label: 'Individual', icon: '👤' },
+    { value: 'healthcare_provider', label: 'Healthcare Provider', icon: '👨‍⚕️' },
+    { value: 'researcher', label: 'Researcher', icon: '🔬' },
+    { value: 'admin', label: 'Administrator', icon: '⚙️' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mb-6">
+            <span className="text-2xl text-white">🏥</span>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Create Account
           </h2>
+          <p className="text-gray-600">
+            Join the secure health data platform
+          </p>
         </div>
-        <form className="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        
+        <div className="professional-card p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name</label>
+              <label className="form-label-professional">Full Name</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.full_name}
                 onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                placeholder="Enter your full name"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Username</label>
+              <label className="form-label-professional">Username</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
+                placeholder="Choose a username"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <label className="form-label-professional">Email Address</label>
               <input
                 type="email"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="Enter your email"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="form-label-professional">Password</label>
               <input
                 type="password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="Create a secure password"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
+              <label className="form-label-professional">Role</label>
               <select
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="form-input-professional"
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
               >
-                <option value="individual">Individual</option>
-                <option value="healthcare_provider">Healthcare Provider</option>
-                <option value="researcher">Researcher</option>
-                <option value="admin">Admin</option>
+                {roleOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.icon} {option.label}
+                  </option>
+                ))}
               </select>
             </div>
-          </div>
-          <div>
+            
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="btn-professional btn-primary w-full"
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? (
+                <>
+                  <div className="loading-spinner w-4 h-4"></div>
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Create Account
+                </>
+              )}
             </button>
-          </div>
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => window.location.href = '/login'}
-              className="text-blue-600 hover:text-blue-500"
-            >
-              Already have an account? Login here
-            </button>
-          </div>
-        </form>
+            
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => window.location.href = '/login'}
+                className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+              >
+                Already have an account? Sign in here
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
 
-// Enhanced Dashboard Component
+// Professional Dashboard Component
 const Dashboard = () => {
   const { user } = useAuth();
   const [records, setRecords] = useState([]);
@@ -408,108 +505,188 @@ const Dashboard = () => {
     }
   };
 
+  const getRecordTypeIcon = (type) => {
+    const icons = {
+      human: '👤',
+      animal: '🐕',
+      plant: '🌱'
+    };
+    return icons[type] || '📄';
+  };
+
+  const getRecordTypeClass = (type) => {
+    const classes = {
+      human: 'record-type-human',
+      animal: 'record-type-animal',
+      plant: 'record-type-plant'
+    };
+    return classes[type] || 'record-type-human';
+  };
+
   if (!user) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-    </div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="loading-spinner"></div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Blockchain Stats */}
-          <div className="mb-8">
-            <BlockchainStats />
-          </div>
+      
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Blockchain Stats */}
+        <div className="mb-8 fade-in">
+          <BlockchainStats />
+        </div>
 
-          {/* Action Buttons */}
-          <div className="mb-6 flex flex-wrap gap-4">
-            {(user.role === 'healthcare_provider' || user.role === 'individual') && (
-              <button
-                onClick={() => setShowCreateRecord(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                📝 Create Health Record
-              </button>
-            )}
+        {/* Action Buttons */}
+        <div className="mb-8 flex flex-wrap gap-4">
+          {(user.role === 'healthcare_provider' || user.role === 'individual') && (
             <button
-              onClick={() => setShowMFASetup(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              onClick={() => setShowCreateRecord(true)}
+              className="btn-professional btn-primary"
             >
-              🔒 Setup MFA
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Health Record
             </button>
-          </div>
+          )}
+          
+          <button
+            onClick={() => setShowMFASetup(true)}
+            className="btn-professional btn-success"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Setup MFA Security
+          </button>
+        </div>
 
-          {/* Health Records */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Health Records</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                {user.role === 'admin' ? 'All system records' : 'Your accessible records'} - Secured with blockchain
-              </p>
+        {/* Health Records */}
+        <div className="professional-card fade-in">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Health Records</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {user.role === 'admin' ? 'All system records' : 'Your accessible records'} - Secured with blockchain technology
+                </p>
+              </div>
+              <div className="security-indicator">
+                <svg className="security-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700">Blockchain Secured</span>
+              </div>
             </div>
-            
-            {loading ? (
-              <div className="px-4 py-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading records...</p>
+          </div>
+          
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="loading-spinner mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading health records...</p>
+            </div>
+          ) : records.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-            ) : records.length === 0 ? (
-              <div className="px-4 py-8 text-center text-gray-500">
-                No health records found. Create your first record to get started.
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-200">
-                {records.map((record) => (
-                  <li key={record.id} className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <span className="text-2xl">
-                            {record.record_type === 'human' ? '👤' : 
-                             record.record_type === 'animal' ? '🐕' : '🌱'}
+              <h4 className="text-lg font-medium text-gray-900 mb-2">No Health Records</h4>
+              <p className="text-gray-600 mb-4">Create your first health record to get started with secure data management.</p>
+              {(user.role === 'healthcare_provider' || user.role === 'individual') && (
+                <button
+                  onClick={() => setShowCreateRecord(true)}
+                  className="btn-professional btn-primary"
+                >
+                  Create First Record
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {records.map((record) => (
+                <div key={record.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className={`record-type-icon ${getRecordTypeClass(record.record_type)}`}>
+                        {getRecordTypeIcon(record.record_type)}
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h4 className="text-lg font-medium text-gray-900">
+                            {record.title || 'Untitled Record'}
+                          </h4>
+                          <span className={`status-badge ${record.is_public ? 'status-public' : 'status-private'}`}>
+                            {record.is_public ? (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Public
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                Private
+                              </>
+                            )}
+                          </span>
+                          <span className={`status-badge ${record.is_verified ? 'status-verified' : 'status-unverified'}`}>
+                            {record.is_verified ? (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Verified
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Unverified
+                              </>
+                            )}
                           </span>
                         </div>
-                        <div className="ml-4">
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium text-gray-900">{record.title || 'Untitled Record'}</p>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              record.is_public ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {record.is_public ? '🌍 Public' : '🔒 Private'}
-                            </span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              record.is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {record.is_verified ? '🔗 Verified' : '⚠️ Unverified'}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-500">{record.description || 'No description'}</p>
-                          <p className="text-xs text-gray-400">
-                            Subject: {record.subject_name || 'Unknown'} | Type: {record.record_type || 'Unknown'}
-                          </p>
+                        
+                        <p className="text-gray-600 mb-2">{record.description || 'No description available'}</p>
+                        
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span>Subject: {record.subject_name || 'Unknown'}</span>
+                          <span>•</span>
+                          <span>Type: {record.record_type || 'Unknown'}</span>
+                          <span>•</span>
+                          <span>Created: {record.created_at ? new Date(record.created_at).toLocaleDateString() : 'Unknown'}</span>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => handleVerifyRecord(record.id)}
-                          className="text-blue-600 hover:text-blue-900 text-sm"
-                        >
-                          🔗 Verify
-                        </button>
-                        <button className="text-green-600 hover:text-green-900 text-sm">View</button>
-                        {(record.owner_id === user.id || user.role === 'admin') && (
-                          <button className="text-orange-600 hover:text-orange-900 text-sm">Edit</button>
-                        )}
-                      </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => handleVerifyRecord(record.id)}
+                        className="btn-professional btn-secondary text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Verify
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -526,7 +703,7 @@ const Dashboard = () => {
   );
 };
 
-// Create Record Modal
+// Professional Create Record Modal
 const CreateRecordModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -556,115 +733,166 @@ const CreateRecordModal = ({ onClose, onSuccess }) => {
     }
   };
 
+  const recordTypes = [
+    { value: 'human', label: 'Human Health', icon: '👤' },
+    { value: 'animal', label: 'Animal Health', icon: '🐕' },
+    { value: 'plant', label: 'Plant Health', icon: '🌱' }
+  ];
+
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div className="mt-3">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Create Health Record</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="modal-overlay-professional">
+      <div className="modal-content-professional max-w-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-gray-900">Create Health Record</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Title</label>
+              <label className="form-label-professional">Record Title</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="form-input-professional"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
+                placeholder="Enter record title"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <label className="form-label-professional">Record Type</label>
               <select
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="form-input-professional"
                 value={formData.record_type}
                 onChange={(e) => setFormData({...formData, record_type: e.target.value})}
               >
-                <option value="human">Human</option>
-                <option value="animal">Animal</option>
-                <option value="plant">Plant</option>
+                {recordTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.icon} {type.label}
+                  </option>
+                ))}
               </select>
             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Subject Name</label>
+              <label className="form-label-professional">Subject Name</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="form-input-professional"
                 value={formData.subject_name}
                 onChange={(e) => setFormData({...formData, subject_name: e.target.value})}
+                placeholder="Enter subject name"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700">Subject ID</label>
+              <label className="form-label-professional">Subject ID</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="form-input-professional"
                 value={formData.subject_id}
                 onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
+                placeholder="Enter unique identifier"
               />
             </div>
+          </div>
+          
+          <div>
+            <label className="form-label-professional">Description</label>
+            <textarea
+              className="form-input-professional"
+              rows="3"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Describe the health record..."
+            />
+          </div>
+          
+          <div>
+            <label className="form-label-professional">Clinical Notes</label>
+            <textarea
+              className="form-input-professional"
+              rows="4"
+              value={formData.data.notes}
+              onChange={(e) => setFormData({
+                ...formData, 
+                data: { ...formData.data, notes: e.target.value }
+              })}
+              placeholder="Enter clinical observations, treatments, or other relevant notes..."
+            />
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="is_public"
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              checked={formData.is_public}
+              onChange={(e) => setFormData({...formData, is_public: e.target.checked})}
+            />
+            <label htmlFor="is_public" className="text-sm font-medium text-gray-700">
+              Make this record publicly accessible for research
+            </label>
+          </div>
+          
+          <div className="blockchain-indicator blockchain-valid">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                rows="3"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-              />
+              <p className="font-medium">Blockchain Security Enabled</p>
+              <p className="text-xs opacity-75">This record will be secured with immutable blockchain technology</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Notes</label>
-              <textarea
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                rows="2"
-                value={formData.data.notes}
-                onChange={(e) => setFormData({
-                  ...formData, 
-                  data: { ...formData.data, notes: e.target.value }
-                })}
-              />
-            </div>
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="mr-2"
-                  checked={formData.is_public}
-                  onChange={(e) => setFormData({...formData, is_public: e.target.checked})}
-                />
-                <span className="text-sm text-gray-700">Make this record public</span>
-              </label>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-xs text-blue-800">
-                🔗 This record will be secured with blockchain technology for tamper-proof integrity
-              </p>
-            </div>
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Creating...' : 'Create & Secure'}
-              </button>
-            </div>
-          </form>
-        </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-professional btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-professional btn-primary"
+            >
+              {loading ? (
+                <>
+                  <div className="loading-spinner w-4 h-4"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Create & Secure Record
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
 
-// MFA Setup Modal
+// Professional MFA Setup Modal
 const MFASetupModal = ({ onClose }) => {
   const [mfaData, setMfaData] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
@@ -689,7 +917,7 @@ const MFASetupModal = ({ onClose }) => {
     setLoading(true);
     try {
       await axios.post(`${API}/auth/enable-mfa?mfa_token=${verificationCode}`);
-      toast.success('MFA enabled successfully!');
+      toast.success('Multi-factor authentication enabled successfully!');
       onClose();
     } catch (error) {
       console.error('Failed to enable MFA:', error);
@@ -709,84 +937,109 @@ const MFASetupModal = ({ onClose }) => {
 
   if (!mfaData) {
     return (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-          <div className="text-center">Loading MFA setup...</div>
+      <div className="modal-overlay-professional">
+        <div className="modal-content-professional">
+          <div className="text-center py-8">
+            <div className="loading-spinner mx-auto mb-4"></div>
+            <p className="text-gray-600">Setting up multi-factor authentication...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-auto max-w-lg shadow-lg rounded-md bg-white">
-        <div className="mt-3">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Setup Multi-Factor Authentication</h3>
-          <div className="space-y-4">
-            <div className="text-center">
-              <p className="text-sm text-gray-600 mb-4">
-                Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
-              </p>
-              <div className="flex justify-center bg-white p-4 rounded-lg">
-                <QRCode 
-                  value={getTOTPUri()} 
-                  size={200}
-                  level="M"
-                />
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Or enter this code manually in your authenticator app:
-              </p>
-              <div className="bg-gray-100 p-3 rounded text-sm font-mono break-all">
-                {mfaData.manual_entry_key}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                ⏱️ Time interval: 90 seconds
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Backup Codes (save these safely):
-              </p>
-              <div className="bg-gray-100 p-3 rounded text-sm font-mono">
-                {mfaData.backup_codes?.map((code, index) => (
-                  <div key={index}>{code}</div>
-                )) || 'No backup codes available'}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Enter verification code from your authenticator app:
-              </label>
-              <input
-                type="text"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                placeholder="Enter 6-digit code"
-                maxLength="6"
+    <div className="modal-overlay-professional">
+      <div className="modal-content-professional max-w-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-gray-900">Setup Multi-Factor Authentication</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-gray-600 mb-6">
+              Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+            </p>
+            <div className="flex justify-center bg-white p-6 rounded-lg border border-gray-200">
+              <QRCode 
+                value={getTOTPUri()} 
+                size={200}
+                level="M"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                ⚠️ Note: This app uses 90-second intervals instead of the standard 30 seconds
-              </p>
             </div>
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={enableMFA}
-                disabled={loading || !verificationCode || verificationCode.length !== 6}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Enabling...' : 'Enable MFA'}
-              </button>
+          </div>
+          
+          <div>
+            <label className="form-label-professional">Manual Entry Key</label>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <code className="text-sm font-mono break-all">{mfaData.manual_entry_key}</code>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              ⏱️ Time interval: 90 seconds (custom configuration)
+            </p>
+          </div>
+          
+          <div>
+            <label className="form-label-professional">Backup Codes</label>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-600 mb-2">Save these codes safely - you can use them if you lose access to your authenticator:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {mfaData.backup_codes?.map((code, index) => (
+                  <code key={index} className="text-xs font-mono bg-white p-2 rounded border">{code}</code>
+                )) || <p className="text-sm text-gray-500">No backup codes available</p>}
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <label className="form-label-professional">Verification Code</label>
+            <input
+              type="text"
+              className="form-input-professional"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              placeholder="Enter 6-digit code from your app"
+              maxLength="6"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter the current code from your authenticator app to verify setup
+            </p>
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="btn-professional btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={enableMFA}
+              disabled={loading || !verificationCode || verificationCode.length !== 6}
+              className="btn-professional btn-success"
+            >
+              {loading ? (
+                <>
+                  <div className="loading-spinner w-4 h-4"></div>
+                  Enabling...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Enable MFA
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -806,7 +1059,18 @@ function App() {
             <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          <ToastContainer position="top-right" autoClose={3000} />
+          <ToastContainer 
+            position="top-right" 
+            autoClose={4000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </div>
       </Router>
     </AuthProvider>

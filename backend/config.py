@@ -22,8 +22,8 @@ ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', 'your-encryption-key-change-in
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'digital_one_health')
 
-# Blockchain Configuration
-BLOCKCHAIN_DIFFICULTY = int(os.environ.get('BLOCKCHAIN_DIFFICULTY', '4'))
+# Blockchain Configuration - Reset to difficulty 1 for easier deployment
+BLOCKCHAIN_DIFFICULTY = int(os.environ.get('BLOCKCHAIN_DIFFICULTY', '1'))
 
 # Security Configuration
 MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '90'))  # seconds

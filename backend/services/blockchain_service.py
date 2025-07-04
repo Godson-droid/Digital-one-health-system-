@@ -10,7 +10,7 @@ from ..database import get_database
 class BlockchainService:
     def __init__(self):
         self.db: AsyncIOMotorDatabase = None
-        self.difficulty = 4  # Number of leading zeros required in hash
+        self.difficulty = 1  # Reset to 1 for easier deployment and faster mining
 
     async def get_db(self):
         if not self.db:
@@ -39,19 +39,18 @@ class BlockchainService:
             return hashlib.sha256(f"{block.index}{block.timestamp}{block.previous_hash}{block.nonce}".encode()).hexdigest()
 
     def mine_block(self, block: Block) -> Block:
-        """Mine a block using proof of work"""
+        """Mine a block using proof of work with difficulty 1"""
         try:
-            target = "0" * self.difficulty
+            target = "0" * self.difficulty  # Only requires 1 leading zero
             
             while not block.hash.startswith(target):
                 block.nonce += 1
                 block.hash = self.calculate_block_hash(block)
                 
-                # Prevent infinite loops
-                if block.nonce > 1000000:
-                    print("Warning: Mining taking too long, reducing difficulty")
-                    self.difficulty = max(1, self.difficulty - 1)
-                    target = "0" * self.difficulty
+                # With difficulty 1, this should be very fast
+                if block.nonce > 100000:  # Safety check
+                    print("Warning: Mining taking longer than expected")
+                    break
             
             return block
         except Exception as e:
@@ -126,7 +125,7 @@ class BlockchainService:
                 hash=""
             )
 
-            # Mine the block
+            # Mine the block (should be fast with difficulty 1)
             new_block = self.mine_block(new_block)
 
             # Save to database
