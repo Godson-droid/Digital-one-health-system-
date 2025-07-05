@@ -31,11 +31,12 @@ MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '90'))  # seconds
 # Application Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# CORS Configuration - Updated for deployment
+# CORS Configuration - Enhanced for deployment
 CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
 
-# If CORS_ORIGINS is just '*', allow all origins for development
+# Enhanced CORS configuration for deployment
 if CORS_ORIGINS == ['*']:
+    # Allow all origins for development/testing
     CORS_ORIGINS = ["*"]
 else:
     # Clean up origins and add common deployment URLs
@@ -53,16 +54,31 @@ else:
         "http://127.0.0.1:3001"
     ]
     
-    for dev_origin in dev_origins:
-        if dev_origin not in cleaned_origins:
-            cleaned_origins.append(dev_origin)
+    # Add common deployment origins
+    deployment_origins = [
+        "https://digital-one-health-system.onrender.com",
+        "https://digital-one-health-frontend.onrender.com",
+        "https://digital-one-health.netlify.app",
+        "https://digital-one-health.vercel.app"
+    ]
+    
+    for origin in dev_origins + deployment_origins:
+        if origin not in cleaned_origins:
+            cleaned_origins.append(origin)
     
     CORS_ORIGINS = cleaned_origins
 
-# Timeout Configuration
-REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '30'))  # seconds
-DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '10'))  # seconds
+# Timeout Configuration - Increased for deployment
+REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '45'))  # seconds - increased for Render.com
+DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '15'))  # seconds - increased for cold starts
 
 # Server Configuration
 HOST = os.environ.get('HOST', '0.0.0.0')
 PORT = int(os.environ.get('PORT', '8001'))
+
+# Deployment specific configurations
+DEPLOYMENT_ENV = os.environ.get('DEPLOYMENT_ENV', 'development')
+IS_PRODUCTION = DEPLOYMENT_ENV.lower() == 'production'
+
+# Cold start handling for serverless deployments
+COLD_START_TIMEOUT = int(os.environ.get('COLD_START_TIMEOUT', '60'))  # seconds

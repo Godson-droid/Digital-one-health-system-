@@ -8,13 +8,15 @@ import BlockchainVerification from './components/BlockchainVerification';
 import BlockchainStats from './components/BlockchainStats';
 import './App.css';
 
-// Set backend URL with fallback - Updated for deployment
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 
-  (window.location.hostname === 'localhost' ? 'http://localhost:8001' : window.location.origin);
+// Backend URL configuration - Updated for your deployment
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://digital-one-health-system.onrender.com';
 const API = `${BACKEND_URL}/api`;
 
+console.log('🔗 Backend URL configured:', BACKEND_URL);
+console.log('🔗 API Base URL:', API);
+
 // Configure axios defaults with increased timeout and better error handling
-axios.defaults.timeout = 30000; // Increased to 30 seconds
+axios.defaults.timeout = 45000; // Increased to 45 seconds for Render.com cold starts
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 // Add request interceptor for debugging
@@ -48,7 +50,7 @@ axios.interceptors.response.use(
 
     // Handle different types of errors
     if (error.code === 'ECONNABORTED') {
-      toast.error('Request timeout - server may be slow. Please try again.');
+      toast.error('Request timeout - server may be cold starting. Please wait and try again.');
     } else if (error.code === 'ERR_NETWORK') {
       toast.error('Network error - please check your connection and try again.');
     } else if (error.response?.status === 500) {
@@ -57,6 +59,10 @@ axios.interceptors.response.use(
       toast.error('Service unavailable - server may be starting up.');
     } else if (error.response?.status === 408) {
       toast.error('Request timeout - please try again.');
+    } else if (error.response?.status === 502) {
+      toast.error('Bad Gateway - server is restarting, please wait a moment.');
+    } else if (error.response?.status === 504) {
+      toast.error('Gateway timeout - server is taking longer than usual.');
     } else if (error.response?.status >= 400 && error.response?.status < 500) {
       // Client errors - show specific message if available
       const message = error.response?.data?.detail || error.response?.data?.message || 'Client error occurred';
@@ -94,13 +100,29 @@ const AuthProvider = ({ children }) => {
   const testBackendConnection = async () => {
     try {
       console.log('Testing backend connection to:', BACKEND_URL);
-      const response = await axios.get(`${BACKEND_URL}/health`, { timeout: 10000 });
+      setConnectionStatus('connecting');
+      
+      // Try health endpoint first, then fallback to system status
+      let response;
+      try {
+        response = await axios.get(`${BACKEND_URL}/health`, { timeout: 30000 });
+      } catch (healthError) {
+        console.log('Health endpoint failed, trying system status...');
+        response = await axios.get(`${API}/system/status`, { timeout: 30000 });
+      }
+      
       console.log('Backend connection successful:', response.data);
       setConnectionStatus('connected');
+      toast.success('Connected to Digital One Health backend!');
     } catch (error) {
       console.error('Backend connection failed:', error);
       setConnectionStatus('disconnected');
-      toast.error('Unable to connect to backend server. Please check if the server is running.');
+      
+      if (error.code === 'ECONNABORTED') {
+        toast.error('Backend connection timeout. Server may be cold starting - please wait and refresh.');
+      } else {
+        toast.error('Unable to connect to backend server. Please check if the server is running.');
+      }
     }
   };
 
@@ -161,15 +183,21 @@ const AuthProvider = ({ children }) => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="loading-spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading application...</p>
+          <p className="text-gray-600">Loading Digital One Health...</p>
           {connectionStatus === 'checking' && (
             <p className="text-sm text-gray-500 mt-2">Testing backend connection...</p>
+          )}
+          {connectionStatus === 'connecting' && (
+            <p className="text-sm text-blue-500 mt-2">Connecting to backend...</p>
           )}
           {connectionStatus === 'disconnected' && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-600 font-medium">Backend Connection Failed</p>
               <p className="text-red-500 text-sm mt-1">
                 Unable to connect to: {BACKEND_URL}
+              </p>
+              <p className="text-red-500 text-xs mt-1">
+                Server may be cold starting (Render.com). Please wait 30-60 seconds.
               </p>
               <button 
                 onClick={testBackendConnection}
@@ -229,12 +257,21 @@ const Navigation = () => {
             <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs ${
               connectionStatus === 'connected' 
                 ? 'bg-green-100 text-green-800' 
+                : connectionStatus === 'connecting'
+                ? 'bg-yellow-100 text-yellow-800'
                 : 'bg-red-100 text-red-800'
             }`}>
               <div className={`w-2 h-2 rounded-full ${
-                connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+                connectionStatus === 'connected' 
+                  ? 'bg-green-500' 
+                  : connectionStatus === 'connecting'
+                  ? 'bg-yellow-500 animate-pulse'
+                  : 'bg-red-500'
               }`}></div>
-              <span>{connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}</span>
+              <span>
+                {connectionStatus === 'connected' ? 'Connected' : 
+                 connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+              </span>
             </div>
             
             <div className="hidden md:flex items-center space-x-3">
@@ -339,25 +376,41 @@ const Login = () => {
           <div className={`mt-4 p-3 rounded-lg ${
             connectionStatus === 'connected' 
               ? 'bg-green-50 border border-green-200' 
+              : connectionStatus === 'connecting'
+              ? 'bg-yellow-50 border border-yellow-200'
               : 'bg-red-50 border border-red-200'
           }`}>
             <div className="flex items-center justify-center space-x-2">
               <div className={`w-3 h-3 rounded-full ${
-                connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+                connectionStatus === 'connected' 
+                  ? 'bg-green-500' 
+                  : connectionStatus === 'connecting'
+                  ? 'bg-yellow-500 animate-pulse'
+                  : 'bg-red-500'
               }`}></div>
               <span className={`text-sm font-medium ${
-                connectionStatus === 'connected' ? 'text-green-800' : 'text-red-800'
+                connectionStatus === 'connected' 
+                  ? 'text-green-800' 
+                  : connectionStatus === 'connecting'
+                  ? 'text-yellow-800'
+                  : 'text-red-800'
               }`}>
-                {connectionStatus === 'connected' ? 'Server Connected' : 'Server Disconnected'}
+                {connectionStatus === 'connected' ? 'Server Connected' : 
+                 connectionStatus === 'connecting' ? 'Connecting to Server...' : 'Server Disconnected'}
               </span>
             </div>
             {connectionStatus === 'disconnected' && (
-              <button 
-                onClick={testBackendConnection}
-                className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
-              >
-                Retry Connection
-              </button>
+              <div className="mt-2 text-center">
+                <p className="text-xs text-red-600 mb-2">
+                  Server may be cold starting (Render.com). Please wait 30-60 seconds.
+                </p>
+                <button 
+                  onClick={testBackendConnection}
+                  className="text-xs text-red-600 hover:text-red-800 underline"
+                >
+                  Retry Connection
+                </button>
+              </div>
             )}
           </div>
         </div>
