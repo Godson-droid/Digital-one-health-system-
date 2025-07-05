@@ -13,7 +13,7 @@ class HealthRecordService:
         self.db: AsyncIOMotorDatabase = None
 
     async def get_db(self):
-        if not self.db:
+        if self.db is None:
             self.db = await get_database()
         return self.db
 
@@ -22,22 +22,36 @@ class HealthRecordService:
         try:
             db = await self.get_db()
             
+            # Validate input data
+            if not record_data.title or not record_data.description:
+                raise ValueError("Title and description are required")
+            
+            if not record_data.subject_id or not record_data.subject_name:
+                raise ValueError("Subject ID and name are required")
+            
+            # Ensure data is not None
+            data_to_encrypt = record_data.data if record_data.data is not None else {}
+            
             # Encrypt sensitive data
-            encrypted_data = encrypt_data(json.dumps(record_data.data))
+            encrypted_data = encrypt_data(json.dumps(data_to_encrypt))
             
             record = HealthRecordInDB(
-                title=record_data.title,
-                description=record_data.description,
+                title=record_data.title.strip(),
+                description=record_data.description.strip(),
                 record_type=record_data.record_type,
-                subject_id=record_data.subject_id,
-                subject_name=record_data.subject_name,
+                subject_id=record_data.subject_id.strip(),
+                subject_name=record_data.subject_name.strip(),
                 data={"encrypted": encrypted_data},
                 is_public=record_data.is_public,
                 owner_id=owner_id,
                 created_by=owner_id
             )
             
-            await db.health_records.insert_one(record.dict())
+            # Insert into database
+            result = await db.health_records.insert_one(record.dict())
+            if result.inserted_id is None:
+                raise Exception("Failed to insert record into database")
+                
             return record
         except Exception as e:
             print(f"Error creating health record: {e}")
@@ -46,13 +60,17 @@ class HealthRecordService:
     async def get_record_by_id(self, record_id: str) -> Optional[HealthRecordInDB]:
         """Get health record by ID"""
         try:
+            if not record_id:
+                return None
+                
             db = await self.get_db()
             record_data = await db.health_records.find_one({"id": record_id})
-            if not record_data:
+            
+            if record_data is None:
                 return None
             
             # Decrypt data if encrypted
-            if record_data.get("data", {}).get("encrypted"):
+            if record_data.get("data") is not None and record_data["data"].get("encrypted") is not None:
                 try:
                     decrypted_data = decrypt_data(record_data["data"]["encrypted"])
                     record_data["data"] = json.loads(decrypted_data)
@@ -86,7 +104,7 @@ class HealthRecordService:
             # Decrypt data for authorized users
             decrypted_records = []
             for record_data in records:
-                if record_data.get("data", {}).get("encrypted"):
+                if record_data.get("data") is not None and record_data["data"].get("encrypted") is not None:
                     try:
                         # Check if user has access to decrypt
                         if (user.role == "admin" or 
@@ -110,13 +128,16 @@ class HealthRecordService:
     async def update_record(self, record_id: str, update_data: HealthRecordUpdate) -> Optional[HealthRecordInDB]:
         """Update a health record"""
         try:
+            if not record_id:
+                return None
+                
             db = await self.get_db()
             
             update_dict = {}
             if update_data.title is not None:
-                update_dict["title"] = update_data.title
+                update_dict["title"] = update_data.title.strip()
             if update_data.description is not None:
-                update_dict["description"] = update_data.description
+                update_dict["description"] = update_data.description.strip()
             if update_data.is_public is not None:
                 update_dict["is_public"] = update_data.is_public
             if update_data.data is not None:
@@ -141,6 +162,9 @@ class HealthRecordService:
     async def update_privacy(self, record_id: str, is_public: bool) -> bool:
         """Update privacy setting for a record"""
         try:
+            if not record_id:
+                return False
+                
             db = await self.get_db()
             result = await db.health_records.update_one(
                 {"id": record_id},
@@ -159,6 +183,9 @@ class HealthRecordService:
     async def update_blockchain_info(self, record_id: str, blockchain_hash: str, block_number: int) -> bool:
         """Update blockchain information for a record"""
         try:
+            if not record_id:
+                return False
+                
             db = await self.get_db()
             result = await db.health_records.update_one(
                 {"id": record_id},
@@ -178,6 +205,9 @@ class HealthRecordService:
     async def delete_record(self, record_id: str) -> bool:
         """Soft delete a health record"""
         try:
+            if not record_id:
+                return False
+                
             db = await self.get_db()
             result = await db.health_records.update_one(
                 {"id": record_id},

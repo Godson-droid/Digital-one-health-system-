@@ -28,7 +28,10 @@ class UserService:
                 hashed_password=hashed_password
             )
             
-            await db.users.insert_one(user.dict())
+            result = await db.users.insert_one(user.dict())
+            if result.inserted_id is None:
+                raise Exception("Failed to insert user into database")
+                
             return user
         except Exception as e:
             print(f"Error creating user: {e}")
@@ -37,11 +40,16 @@ class UserService:
     async def get_user_by_username(self, username: str) -> Optional[UserInDB]:
         """Get user by username"""
         try:
+            if not username:
+                return None
+                
             db = await self.get_db()
             user_data = await db.users.find_one({"username": username})
-            if user_data is not None:
-                return UserInDB(**user_data)
-            return None
+            
+            if user_data is None:
+                return None
+                
+            return UserInDB(**user_data)
         except Exception as e:
             print(f"Error getting user by username: {e}")
             return None
@@ -49,11 +57,16 @@ class UserService:
     async def get_user_by_id(self, user_id: str) -> Optional[UserInDB]:
         """Get user by ID"""
         try:
+            if not user_id:
+                return None
+                
             db = await self.get_db()
             user_data = await db.users.find_one({"id": user_id})
-            if user_data is not None:
-                return UserInDB(**user_data)
-            return None
+            
+            if user_data is None:
+                return None
+                
+            return UserInDB(**user_data)
         except Exception as e:
             print(f"Error getting user by ID: {e}")
             return None
@@ -61,13 +74,18 @@ class UserService:
     async def get_user_by_username_or_email(self, username: str, email: str) -> Optional[UserInDB]:
         """Check if user exists by username or email"""
         try:
+            if not username and not email:
+                return None
+                
             db = await self.get_db()
             user_data = await db.users.find_one({
                 "$or": [{"username": username}, {"email": email}]
             })
-            if user_data is not None:
-                return UserInDB(**user_data)
-            return None
+            
+            if user_data is None:
+                return None
+                
+            return UserInDB(**user_data)
         except Exception as e:
             print(f"Error checking user existence: {e}")
             return None
@@ -77,9 +95,11 @@ class UserService:
         try:
             db = await self.get_db()
             user_data = await db.users.find_one({"role": "admin"})
-            if user_data is not None:
-                return UserInDB(**user_data)
-            return None
+            
+            if user_data is None:
+                return None
+                
+            return UserInDB(**user_data)
         except Exception as e:
             print(f"Error getting admin user: {e}")
             return None
@@ -117,6 +137,9 @@ class UserService:
     async def update_mfa_secret(self, user_id: str, secret: str, backup_codes: List[str]) -> bool:
         """Update MFA secret and backup codes for user"""
         try:
+            if not user_id:
+                return False
+                
             db = await self.get_db()
             result = await db.users.update_one(
                 {"id": user_id},
@@ -136,6 +159,9 @@ class UserService:
     async def enable_mfa(self, user_id: str) -> bool:
         """Enable MFA for user"""
         try:
+            if not user_id:
+                return False
+                
             db = await self.get_db()
             result = await db.users.update_one(
                 {"id": user_id},
@@ -165,6 +191,9 @@ class UserService:
     async def update_user_status(self, user_id: str, is_active: bool) -> bool:
         """Update user active status"""
         try:
+            if not user_id:
+                return False
+                
             db = await self.get_db()
             result = await db.users.update_one(
                 {"id": user_id},
