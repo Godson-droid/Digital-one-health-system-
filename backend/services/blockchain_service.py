@@ -21,6 +21,7 @@ class BlockchainService:
         """Calculate SHA-256 hash of data"""
         try:
             if isinstance(data, dict):
+                # Sort keys and handle datetime objects properly
                 data_string = json.dumps(data, sort_keys=True, default=str)
             else:
                 data_string = str(data)
@@ -32,7 +33,9 @@ class BlockchainService:
     def calculate_block_hash(self, block: Block) -> str:
         """Calculate hash for a block"""
         try:
-            block_string = f"{block.index}{block.timestamp}{json.dumps(block.data.dict(), sort_keys=True)}{block.previous_hash}{block.nonce}"
+            # Create a consistent string representation for hashing
+            data_dict = block.data.dict() if hasattr(block.data, 'dict') else block.data
+            block_string = f"{block.index}{block.timestamp.isoformat()}{json.dumps(data_dict, sort_keys=True, default=str)}{block.previous_hash}{block.nonce}"
             return hashlib.sha256(block_string.encode()).hexdigest()
         except Exception as e:
             print(f"Error calculating block hash: {e}")
@@ -52,6 +55,7 @@ class BlockchainService:
                     print("Warning: Mining taking longer than expected")
                     break
             
+            print(f"Block mined successfully with nonce: {block.nonce}, hash: {block.hash}")
             return block
         except Exception as e:
             print(f"Error mining block: {e}")
@@ -62,11 +66,17 @@ class BlockchainService:
         """Get the latest block in the chain"""
         try:
             db = await self.get_db()
+            if db is None:
+                return None
+                
             latest_block_data = await db.blockchain.find_one(
                 {},
                 sort=[("index", -1)]
             )
             if latest_block_data is not None:
+                # Convert MongoDB document to Block object
+                if '_id' in latest_block_data:
+                    del latest_block_data['_id']
                 return Block(**latest_block_data)
             return None
         except Exception as e:
@@ -92,6 +102,7 @@ class BlockchainService:
             )
             
             genesis_block.hash = self.calculate_block_hash(genesis_block)
+            print(f"Genesis block created with hash: {genesis_block.hash}")
             return genesis_block
         except Exception as e:
             print(f"Error creating genesis block: {e}")
@@ -100,13 +111,19 @@ class BlockchainService:
     async def add_block(self, record_id: str, action: str, data_hash: str, user_id: str) -> Block:
         """Add a new block to the blockchain"""
         try:
+            if not record_id or not action or not user_id:
+                raise ValueError("Missing required parameters for blockchain block")
+                
             db = await self.get_db()
+            if db is None:
+                raise Exception("Database connection failed")
             
             # Get the latest block
             latest_block = await self.get_latest_block()
             
             # Create genesis block if chain is empty
             if latest_block is None:
+                print("Creating genesis block...")
                 genesis_block = await self.create_genesis_block()
                 await db.blockchain.insert_one(genesis_block.dict())
                 latest_block = genesis_block
@@ -131,9 +148,15 @@ class BlockchainService:
             new_block = self.mine_block(new_block)
 
             # Save to database
-            await db.blockchain.insert_one(new_block.dict())
+            block_dict = new_block.dict()
+            result = await db.blockchain.insert_one(block_dict)
             
+            if result.inserted_id is None:
+                raise Exception("Failed to insert block into database")
+            
+            print(f"Block added successfully: Index {new_block.index}, Hash: {new_block.hash}")
             return new_block
+            
         except Exception as e:
             print(f"Error adding block: {e}")
             raise
@@ -142,6 +165,8 @@ class BlockchainService:
         """Verify the integrity of the entire blockchain"""
         try:
             db = await self.get_db()
+            if db is None:
+                return False
             
             # Get all blocks ordered by index
             blocks_cursor = db.blockchain.find({}).sort("index", 1)
@@ -150,7 +175,12 @@ class BlockchainService:
             if not blocks_data:
                 return True  # Empty chain is valid
             
-            blocks = [Block(**block_data) for block_data in blocks_data]
+            # Convert to Block objects
+            blocks = []
+            for block_data in blocks_data:
+                if '_id' in block_data:
+                    del block_data['_id']
+                blocks.append(Block(**block_data))
             
             # Verify each block
             for i in range(len(blocks)):
@@ -169,6 +199,7 @@ class BlockchainService:
                         print(f"Block {i} previous hash mismatch")
                         return False
             
+            print("Blockchain integrity verification passed")
             return True
         except Exception as e:
             print(f"Error verifying chain integrity: {e}")
@@ -177,7 +208,12 @@ class BlockchainService:
     async def verify_record_integrity(self, record_id: str) -> bool:
         """Verify the integrity of a specific record using blockchain"""
         try:
+            if not record_id:
+                return False
+                
             db = await self.get_db()
+            if db is None:
+                return False
             
             # Get all blocks for this record
             blocks_cursor = db.blockchain.find(
@@ -186,16 +222,23 @@ class BlockchainService:
             blocks_data = await blocks_cursor.to_list(1000)
             
             if not blocks_data:
+                print(f"No blockchain record found for record_id: {record_id}")
                 return False  # No blockchain record found
+            
+            print(f"Found {len(blocks_data)} blockchain entries for record {record_id}")
             
             # Verify each block's integrity
             for block_data in blocks_data:
+                if '_id' in block_data:
+                    del block_data['_id']
                 block = Block(**block_data)
                 calculated_hash = self.calculate_block_hash(block)
                 
                 if block.hash != calculated_hash:
+                    print(f"Block integrity failed for record {record_id}: expected {block.hash}, got {calculated_hash}")
                     return False
             
+            print(f"Record integrity verification passed for record {record_id}")
             return True
         except Exception as e:
             print(f"Error verifying record integrity: {e}")
@@ -204,7 +247,12 @@ class BlockchainService:
     async def get_record_history(self, record_id: str) -> List[Dict[str, Any]]:
         """Get the complete blockchain history for a record"""
         try:
+            if not record_id:
+                return []
+                
             db = await self.get_db()
+            if db is None:
+                return []
             
             blocks_cursor = db.blockchain.find(
                 {"data.record_id": record_id}
@@ -213,6 +261,8 @@ class BlockchainService:
             
             history = []
             for block_data in blocks_data:
+                if '_id' in block_data:
+                    del block_data['_id']
                 block = Block(**block_data)
                 calculated_hash = self.calculate_block_hash(block)
                 history.append({
@@ -224,6 +274,7 @@ class BlockchainService:
                     "is_valid": block.hash == calculated_hash
                 })
             
+            print(f"Retrieved {len(history)} blockchain entries for record {record_id}")
             return history
         except Exception as e:
             print(f"Error getting record history: {e}")
@@ -233,6 +284,13 @@ class BlockchainService:
         """Get blockchain statistics"""
         try:
             db = await self.get_db()
+            if db is None:
+                return {
+                    "total_blocks": 0,
+                    "latest_block_index": -1,
+                    "chain_integrity": False,
+                    "difficulty": self.difficulty
+                }
             
             total_blocks = await db.blockchain.count_documents({})
             
@@ -260,7 +318,12 @@ class BlockchainService:
     async def perform_integrity_check(self, record_id: str) -> IntegrityCheck:
         """Perform a comprehensive integrity check on a record"""
         try:
+            if not record_id:
+                raise ValueError("Record ID is required")
+                
             db = await self.get_db()
+            if db is None:
+                raise Exception("Database connection failed")
             
             # Get the record
             record = await db.health_records.find_one({"id": record_id})
@@ -298,6 +361,8 @@ class BlockchainService:
         """Rebuild blockchain integrity by recalculating all hashes"""
         try:
             db = await self.get_db()
+            if db is None:
+                return False
             
             # Get all blocks ordered by index
             blocks_cursor = db.blockchain.find({}).sort("index", 1)
@@ -308,6 +373,12 @@ class BlockchainService:
             
             # Rebuild each block
             for i, block_data in enumerate(blocks_data):
+                if '_id' in block_data:
+                    block_id = block_data['_id']
+                    del block_data['_id']
+                else:
+                    continue
+                    
                 block = Block(**block_data)
                 
                 # Recalculate hash
@@ -316,7 +387,7 @@ class BlockchainService:
                 # Update if hash is incorrect
                 if block.hash != correct_hash:
                     await db.blockchain.update_one(
-                        {"_id": block_data["_id"]},
+                        {"_id": block_id},
                         {"$set": {"hash": correct_hash}}
                     )
                     print(f"Fixed block {i} hash")

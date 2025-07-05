@@ -375,7 +375,8 @@ function App() {
       loadDashboardData();
     } catch (error) {
       console.error('Failed to update privacy:', error);
-      toast.error('Failed to update privacy settings');
+      const errorMessage = error.response?.data?.detail || 'Failed to update privacy settings';
+      toast.error(errorMessage);
     }
   };
 
@@ -404,7 +405,7 @@ function App() {
 
   // Connection Status Component - FIXED POSITIONING
   const ConnectionStatus = () => (
-    <div className={`fixed bottom-4 right-4 z-40 px-3 py-2 rounded-lg text-sm font-medium shadow-lg ${
+    <div className={`fixed bottom-4 left-4 z-30 px-3 py-2 rounded-lg text-sm font-medium shadow-lg ${
       connectionStatus === 'connected' 
         ? 'bg-green-100 text-green-800 border border-green-200' 
         : connectionStatus === 'disconnected'
@@ -781,7 +782,8 @@ function App() {
                               🔗 Verify
                             </button>
                             
-                            {(user.role === 'admin' || record.owner_id === user.id) && (
+                            {/* STRICT PERMISSION CHECK - Only show privacy toggle if user can modify */}
+                            {record.can_change_privacy && (
                               <button
                                 onClick={() => toggleRecordPrivacy(record.id, record.is_public)}
                                 className="text-gray-600 hover:text-gray-800 text-sm"
@@ -857,6 +859,28 @@ function App() {
                         {record.is_verified ? 'Verified' : 'Unverified'}
                       </span>
                     </div>
+
+                    {/* Permission Indicators */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Permissions:</span>
+                      <div className="flex space-x-1">
+                        {record.can_modify && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded" title="Can modify">
+                            ✏️
+                          </span>
+                        )}
+                        {record.can_change_privacy && (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded" title="Can change privacy">
+                            🔒
+                          </span>
+                        )}
+                        {!record.can_modify && !record.can_change_privacy && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded" title="Read only">
+                            👁️
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200">
@@ -867,7 +891,8 @@ function App() {
                       🔗 Verify
                     </button>
                     
-                    {(user.role === 'admin' || record.owner_id === user.id) && (
+                    {/* STRICT PERMISSION CHECK - Only show privacy toggle if user can modify */}
+                    {record.can_change_privacy && (
                       <button
                         onClick={() => toggleRecordPrivacy(record.id, record.is_public)}
                         className="btn-professional btn-secondary text-sm"
@@ -883,7 +908,7 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'create' && (user.role === 'healthcare_provider' || user.role === 'individual') && (
+        {activeTab === 'create' && (user.role === 'healthcare_provider' || user.role === 'individual' || user.role === 'admin') && (
           <div className="max-w-2xl mx-auto">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Create Health Record</h1>
             
