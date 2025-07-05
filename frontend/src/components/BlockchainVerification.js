@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Set backend URL with fallback
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+// Set backend URL with fallback - Updated for deployment
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:8001' : window.location.origin);
 const API = `${BACKEND_URL}/api`;
 
 const BlockchainVerification = ({ recordId, onClose }) => {
@@ -19,12 +20,12 @@ const BlockchainVerification = ({ recordId, onClose }) => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/health-records/${recordId}/verify`);
+      const response = await axios.get(`${API}/health-records/${recordId}/verify`, { timeout: 20000 });
       setVerificationResult(response.data || {});
       
       // Get blockchain history
       try {
-        const historyResponse = await axios.get(`${API}/blockchain/record/${recordId}/history`);
+        const historyResponse = await axios.get(`${API}/blockchain/record/${recordId}/history`, { timeout: 15000 });
         setBlockchainHistory(Array.isArray(historyResponse.data) ? historyResponse.data : []);
       } catch (historyError) {
         console.error('Failed to get blockchain history:', historyError);
@@ -38,7 +39,9 @@ const BlockchainVerification = ({ recordId, onClose }) => {
       }
     } catch (error) {
       console.error('Failed to verify record integrity:', error);
-      toast.error('Failed to verify record integrity');
+      if (error.code !== 'ECONNABORTED') {
+        toast.error('Failed to verify record integrity');
+      }
       setVerificationResult({
         record_id: recordId,
         is_verified: false,

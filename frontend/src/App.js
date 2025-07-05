@@ -8,21 +8,63 @@ import BlockchainVerification from './components/BlockchainVerification';
 import BlockchainStats from './components/BlockchainStats';
 import './App.css';
 
-// Set backend URL with fallback
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+// Set backend URL with fallback - Updated for deployment
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:8001' : window.location.origin);
 const API = `${BACKEND_URL}/api`;
 
-// Configure axios defaults
-axios.defaults.timeout = 10000;
-axios.interceptors.response.use(
-  (response) => response,
+// Configure axios defaults with increased timeout and better error handling
+axios.defaults.timeout = 30000; // Increased to 30 seconds
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+// Add request interceptor for debugging
+axios.interceptors.request.use(
+  (config) => {
+    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
+    return config;
+  },
   (error) => {
-    console.error('API Error:', error);
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Enhanced response interceptor with better error handling
+axios.interceptors.response.use(
+  (response) => {
+    console.log(`Response received from: ${response.config.url} - Status: ${response.status}`);
+    return response;
+  },
+  (error) => {
+    console.error('API Error Details:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code
+    });
+
+    // Handle different types of errors
     if (error.code === 'ECONNABORTED') {
-      toast.error('Request timeout - please try again');
+      toast.error('Request timeout - server may be slow. Please try again.');
+    } else if (error.code === 'ERR_NETWORK') {
+      toast.error('Network error - please check your connection and try again.');
     } else if (error.response?.status === 500) {
-      toast.error('Server error - please try again later');
+      toast.error('Server error - please try again later.');
+    } else if (error.response?.status === 503) {
+      toast.error('Service unavailable - server may be starting up.');
+    } else if (error.response?.status === 408) {
+      toast.error('Request timeout - please try again.');
+    } else if (error.response?.status >= 400 && error.response?.status < 500) {
+      // Client errors - show specific message if available
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Client error occurred';
+      toast.error(message);
+    } else if (!error.response) {
+      toast.error('Unable to connect to server. Please check if the server is running.');
     }
+    
     return Promise.reject(error);
   }
 );
@@ -42,9 +84,28 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState('checking');
+
+  // Test backend connection on startup
+  useEffect(() => {
+    testBackendConnection();
+  }, []);
+
+  const testBackendConnection = async () => {
+    try {
+      console.log('Testing backend connection to:', BACKEND_URL);
+      const response = await axios.get(`${BACKEND_URL}/health`, { timeout: 10000 });
+      console.log('Backend connection successful:', response.data);
+      setConnectionStatus('connected');
+    } catch (error) {
+      console.error('Backend connection failed:', error);
+      setConnectionStatus('disconnected');
+      toast.error('Unable to connect to backend server. Please check if the server is running.');
+    }
+  };
 
   useEffect(() => {
-    if (token) {
+    if (token && connectionStatus === 'connected') {
       // Set axios default header
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       // Decode token to get user info
@@ -62,7 +123,7 @@ const AuthProvider = ({ children }) => {
       }
     }
     setLoading(false);
-  }, [token]);
+  }, [token, connectionStatus]);
 
   const login = (tokenData) => {
     try {
@@ -90,7 +151,9 @@ const AuthProvider = ({ children }) => {
     token,
     login,
     logout,
-    isAuthenticated: !!token && !!user
+    isAuthenticated: !!token && !!user,
+    connectionStatus,
+    testBackendConnection
   };
 
   if (loading) {
@@ -99,6 +162,23 @@ const AuthProvider = ({ children }) => {
         <div className="text-center">
           <div className="loading-spinner mx-auto mb-4"></div>
           <p className="text-gray-600">Loading application...</p>
+          {connectionStatus === 'checking' && (
+            <p className="text-sm text-gray-500 mt-2">Testing backend connection...</p>
+          )}
+          {connectionStatus === 'disconnected' && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 font-medium">Backend Connection Failed</p>
+              <p className="text-red-500 text-sm mt-1">
+                Unable to connect to: {BACKEND_URL}
+              </p>
+              <button 
+                onClick={testBackendConnection}
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Retry Connection
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -113,7 +193,7 @@ const AuthProvider = ({ children }) => {
 
 // Professional Navigation Component
 const Navigation = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, connectionStatus } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
   if (!user) return null;
@@ -145,6 +225,18 @@ const Navigation = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Connection Status Indicator */}
+            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs ${
+              connectionStatus === 'connected' 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-red-100 text-red-800'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+              }`}></div>
+              <span>{connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}</span>
+            </div>
+            
             <div className="hidden md:flex items-center space-x-3">
               <span className="text-white text-sm">Welcome, {user?.full_name || 'User'}</span>
               <span className={`status-badge ${getRoleColor(user?.role)}`}>
@@ -200,10 +292,16 @@ const Login = () => {
   });
   const [needsMFA, setNeedsMFA] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, connectionStatus, testBackendConnection } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (connectionStatus !== 'connected') {
+      toast.error('Backend server is not connected. Please wait or refresh the page.');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -236,6 +334,32 @@ const Login = () => {
           <p className="text-gray-600">
             Secure health data management with blockchain integrity
           </p>
+          
+          {/* Connection Status */}
+          <div className={`mt-4 p-3 rounded-lg ${
+            connectionStatus === 'connected' 
+              ? 'bg-green-50 border border-green-200' 
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            <div className="flex items-center justify-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${
+                connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+              }`}></div>
+              <span className={`text-sm font-medium ${
+                connectionStatus === 'connected' ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {connectionStatus === 'connected' ? 'Server Connected' : 'Server Disconnected'}
+              </span>
+            </div>
+            {connectionStatus === 'disconnected' && (
+              <button 
+                onClick={testBackendConnection}
+                className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+              >
+                Retry Connection
+              </button>
+            )}
+          </div>
         </div>
         
         <div className="professional-card p-8">
@@ -249,6 +373,7 @@ const Login = () => {
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
                 placeholder="Enter your username"
+                disabled={connectionStatus !== 'connected'}
               />
             </div>
             
@@ -261,6 +386,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Enter your password"
+                disabled={connectionStatus !== 'connected'}
               />
             </div>
             
@@ -276,6 +402,7 @@ const Login = () => {
                   className="form-input-professional"
                   value={formData.mfa_token}
                   onChange={(e) => setFormData({...formData, mfa_token: e.target.value})}
+                  disabled={connectionStatus !== 'connected'}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   ⏱️ Note: This system uses 90-second intervals
@@ -285,7 +412,7 @@ const Login = () => {
             
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || connectionStatus !== 'connected'}
               className="btn-professional btn-primary w-full"
             >
               {loading ? (
@@ -308,6 +435,7 @@ const Login = () => {
                 type="button"
                 onClick={() => window.location.href = '/register'}
                 className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+                disabled={connectionStatus !== 'connected'}
               >
                 Don't have an account? Create one here
               </button>
@@ -329,9 +457,16 @@ const Register = () => {
     role: 'individual'
   });
   const [loading, setLoading] = useState(false);
+  const { connectionStatus } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (connectionStatus !== 'connected') {
+      toast.error('Backend server is not connected. Please wait or refresh the page.');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -379,6 +514,7 @@ const Register = () => {
                 value={formData.full_name}
                 onChange={(e) => setFormData({...formData, full_name: e.target.value})}
                 placeholder="Enter your full name"
+                disabled={connectionStatus !== 'connected'}
               />
             </div>
             
@@ -391,6 +527,7 @@ const Register = () => {
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
                 placeholder="Choose a username"
+                disabled={connectionStatus !== 'connected'}
               />
             </div>
             
@@ -403,6 +540,7 @@ const Register = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 placeholder="Enter your email"
+                disabled={connectionStatus !== 'connected'}
               />
             </div>
             
@@ -415,6 +553,7 @@ const Register = () => {
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Create a secure password"
+                disabled={connectionStatus !== 'connected'}
               />
             </div>
             
@@ -425,6 +564,7 @@ const Register = () => {
                 className="form-input-professional"
                 value={formData.role}
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
+                disabled={connectionStatus !== 'connected'}
               >
                 {roleOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -436,7 +576,7 @@ const Register = () => {
             
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || connectionStatus !== 'connected'}
               className="btn-professional btn-primary w-full"
             >
               {loading ? (
@@ -459,6 +599,7 @@ const Register = () => {
                 type="button"
                 onClick={() => window.location.href = '/login'}
                 className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+                disabled={connectionStatus !== 'connected'}
               >
                 Already have an account? Sign in here
               </button>
@@ -472,7 +613,7 @@ const Register = () => {
 
 // Professional Dashboard Component
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, connectionStatus } = useAuth();
   const [records, setRecords] = useState([]);
   const [showCreateRecord, setShowCreateRecord] = useState(false);
   const [showMFASetup, setShowMFASetup] = useState(false);
@@ -481,8 +622,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchHealthRecords();
-  }, []);
+    if (connectionStatus === 'connected') {
+      fetchHealthRecords();
+    }
+  }, [connectionStatus]);
 
   const fetchHealthRecords = async () => {
     try {
@@ -527,6 +670,28 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
+  if (connectionStatus !== 'connected') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Backend Connection Lost</h3>
+          <p className="text-gray-600 mb-4">Unable to connect to the backend server.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="btn-professional btn-primary"
+          >
+            Refresh Page
+          </button>
+        </div>
       </div>
     );
   }
@@ -995,7 +1160,6 @@ const MFASetupModal = ({ onClose }) => {
                 {mfaData.backup_codes?.map((code, index) => (
                   <code key={index} className="text-xs font-mono bg-white p-2 rounded border">{code}</code>
                 )) || <p className="text-sm text-gray-500">No backup codes available</p>}
-                }
               </div>
             </div>
           </div>
@@ -1056,16 +1220,13 @@ function App() {
         <div className="App">
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            }
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-            }
             <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            }
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <ToastContainer 
             position="top-right" 
-            autoClose={4000}
+            autoClose={5000}
             hideProgressBar={false}
             newestOnTop={false}
             closeOnClick

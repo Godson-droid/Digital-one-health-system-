@@ -30,4 +30,39 @@ MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '90'))  # seconds
 
 # Application Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'https://digital-one-health-system.vercel.app').split(',')
+
+# CORS Configuration - Updated for deployment
+CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
+
+# If CORS_ORIGINS is just '*', allow all origins for development
+if CORS_ORIGINS == ['*']:
+    CORS_ORIGINS = ["*"]
+else:
+    # Clean up origins and add common deployment URLs
+    cleaned_origins = []
+    for origin in CORS_ORIGINS:
+        origin = origin.strip()
+        if origin:
+            cleaned_origins.append(origin)
+    
+    # Add common localhost origins for development
+    dev_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001", 
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001"
+    ]
+    
+    for dev_origin in dev_origins:
+        if dev_origin not in cleaned_origins:
+            cleaned_origins.append(dev_origin)
+    
+    CORS_ORIGINS = cleaned_origins
+
+# Timeout Configuration
+REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '30'))  # seconds
+DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '10'))  # seconds
+
+# Server Configuration
+HOST = os.environ.get('HOST', '0.0.0.0')
+PORT = int(os.environ.get('PORT', '8001'))

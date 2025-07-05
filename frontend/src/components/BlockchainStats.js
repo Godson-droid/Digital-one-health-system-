@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Set backend URL with fallback
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+// Set backend URL with fallback - Updated for deployment
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:8001' : window.location.origin);
 const API = `${BACKEND_URL}/api`;
 
 const BlockchainStats = () => {
@@ -18,11 +19,13 @@ const BlockchainStats = () => {
   const fetchBlockchainStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/blockchain/stats`);
+      const response = await axios.get(`${API}/blockchain/stats`, { timeout: 15000 });
       setStats(response.data || {});
     } catch (error) {
       console.error('Failed to fetch blockchain statistics:', error);
-      toast.error('Failed to fetch blockchain statistics');
+      if (error.code !== 'ECONNABORTED') {
+        toast.error('Failed to fetch blockchain statistics');
+      }
       setStats({
         total_blocks: 0,
         latest_block_index: -1,
@@ -37,7 +40,7 @@ const BlockchainStats = () => {
   const verifyChainIntegrity = async () => {
     setVerifying(true);
     try {
-      const response = await axios.get(`${API}/blockchain/verify-chain`);
+      const response = await axios.get(`${API}/blockchain/verify-chain`, { timeout: 20000 });
       if (response.data?.chain_integrity) {
         toast.success('Blockchain integrity verified successfully!');
       } else {
@@ -46,7 +49,9 @@ const BlockchainStats = () => {
       fetchBlockchainStats(); // Refresh stats
     } catch (error) {
       console.error('Failed to verify blockchain integrity:', error);
-      toast.error('Failed to verify blockchain integrity');
+      if (error.code !== 'ECONNABORTED') {
+        toast.error('Failed to verify blockchain integrity');
+      }
     } finally {
       setVerifying(false);
     }
