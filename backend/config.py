@@ -31,54 +31,20 @@ MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '90'))  # seconds
 # Application Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# CORS Configuration - Enhanced for deployment
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
-
-# Enhanced CORS configuration for deployment
-if CORS_ORIGINS == ['*']:
-    # Allow all origins for development/testing
-    CORS_ORIGINS = ["*"]
-else:
-    # Clean up origins and add common deployment URLs
-    cleaned_origins = []
-    for origin in CORS_ORIGINS:
-        origin = origin.strip()
-        if origin:
-            cleaned_origins.append(origin)
-    
-    # Add common localhost origins for development
-    dev_origins = [
-        "http://localhost:3000",
-        "http://localhost:3001", 
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001"
-    ]
-    
-    # Add common deployment origins
-    deployment_origins = [
-        "https://digital-one-health-system.onrender.com",
-        "https://digital-one-health-frontend.onrender.com",
-        "https://digital-one-health.netlify.app",
-        "https://digital-one-health.vercel.app"
-    ]
-    
-    for origin in dev_origins + deployment_origins:
-        if origin not in cleaned_origins:
-            cleaned_origins.append(origin)
-    
-    CORS_ORIGINS = cleaned_origins
+# CORS Configuration - CRITICAL FIX for deployment
+CORS_ORIGINS = ["*"]  # Allow all origins for deployment
 
 # Timeout Configuration - Increased for deployment
-REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '45'))  # seconds - increased for Render.com
-DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '15'))  # seconds - increased for cold starts
+REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '60'))  # seconds - increased for Render.com
+DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '20'))  # seconds - increased for cold starts
 
 # Server Configuration
 HOST = os.environ.get('HOST', '0.0.0.0')
 PORT = int(os.environ.get('PORT', '8001'))
 
 # Deployment specific configurations
-DEPLOYMENT_ENV = os.environ.get('DEPLOYMENT_ENV', 'development')
+DEPLOYMENT_ENV = os.environ.get('DEPLOYMENT_ENV', 'production')
 IS_PRODUCTION = DEPLOYMENT_ENV.lower() == 'production'
 
 # Cold start handling for serverless deployments
-COLD_START_TIMEOUT = int(os.environ.get('COLD_START_TIMEOUT', '60'))  # seconds
+COLD_START_TIMEOUT = int(os.environ.get('COLD_START_TIMEOUT', '90'))  # seconds

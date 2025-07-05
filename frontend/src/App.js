@@ -6,18 +6,20 @@ import './App.css';
 import BlockchainStats from './components/BlockchainStats';
 import BlockchainVerification from './components/BlockchainVerification';
 
-// Backend URL configuration with your deployment URL
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://digital-one-health-system.onrender.com';
+// Backend URL configuration - FIXED for your deployment
+const BACKEND_URL = 'https://digital-one-health-system.onrender.com';
 const API = `${BACKEND_URL}/api`;
 
-// Enhanced axios configuration for deployment
-axios.defaults.timeout = 45000; // 45 seconds for Render.com cold starts
+// Enhanced axios configuration for deployment - CRITICAL FIXES
+axios.defaults.timeout = 60000; // 60 seconds for Render.com cold starts
 axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
 
 // Add request interceptor for debugging
 axios.interceptors.request.use(
   (config) => {
     console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log('Request headers:', config.headers);
     return config;
   },
   (error) => {
@@ -30,10 +32,18 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response) => {
     console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    console.log('Response headers:', response.headers);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error);
+    console.error('❌ API Error Details:', {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method
+    });
     
     if (error.code === 'ECONNABORTED') {
       toast.error('Request timeout - server may be starting up. Please try again.');
@@ -45,6 +55,8 @@ axios.interceptors.response.use(
       toast.error('Authentication required. Please log in.');
     } else if (error.response?.status === 403) {
       toast.error('Access denied. Insufficient permissions.');
+    } else if (error.response?.status === 404) {
+      toast.error('Resource not found.');
     }
     
     return Promise.reject(error);
@@ -90,17 +102,48 @@ function App() {
   const checkConnectionStatus = async () => {
     try {
       console.log(`🔍 Checking connection to: ${BACKEND_URL}`);
-      const response = await axios.get(`${BACKEND_URL}/health`, { timeout: 10000 });
+      setConnectionStatus('checking');
+      
+      // Try health endpoint first
+      const response = await axios.get(`${BACKEND_URL}/health`, { 
+        timeout: 15000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
       setConnectionStatus('connected');
       console.log('✅ Backend connection successful:', response.data);
+      toast.success('Connected to backend successfully!');
+      
     } catch (error) {
       console.error('❌ Backend connection failed:', error);
       setConnectionStatus('disconnected');
       
-      if (error.code === 'ECONNABORTED') {
-        toast.warn('Server is starting up. This may take a moment on first load.');
-      } else {
-        toast.error('Cannot connect to backend server.');
+      // Try alternative endpoints
+      try {
+        console.log('🔄 Trying root endpoint...');
+        const rootResponse = await axios.get(`${BACKEND_URL}/`, { 
+          timeout: 15000,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        setConnectionStatus('connected');
+        console.log('✅ Root endpoint successful:', rootResponse.data);
+        toast.success('Connected to backend via root endpoint!');
+      } catch (rootError) {
+        console.error('❌ Root endpoint also failed:', rootError);
+        
+        if (error.code === 'ECONNABORTED') {
+          toast.warn('Server is starting up. This may take a moment on first load.');
+        } else if (error.response?.status === 0) {
+          toast.error('CORS or network error - cannot reach backend server.');
+        } else {
+          toast.error(`Cannot connect to backend server. Status: ${error.response?.status || 'Unknown'}`);
+        }
       }
     }
   };
@@ -108,7 +151,11 @@ function App() {
   const getCurrentUser = async () => {
     try {
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       setUser(response.data);
       loadDashboardData();
@@ -124,10 +171,18 @@ function App() {
     try {
       const [recordsResponse, statsResponse] = await Promise.all([
         axios.get(`${API}/health-records`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
         }),
         axios.get(`${API}/dashboard/stats`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
         }).catch(() => ({ data: {} })) // Fallback for stats
       ]);
       
@@ -146,7 +201,12 @@ function App() {
     setIsLoading(true);
     
     try {
-      const response = await axios.post(`${API}/auth/login`, loginForm);
+      const response = await axios.post(`${API}/auth/login`, loginForm, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       const { access_token, user: userData } = response.data;
       
       setToken(access_token);
@@ -171,7 +231,12 @@ function App() {
     setIsLoading(true);
     
     try {
-      await axios.post(`${API}/auth/register`, registerForm);
+      await axios.post(`${API}/auth/register`, registerForm, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       toast.success('Registration successful! Please log in.');
       setRegisterForm({
         username: '', email: '', password: '', role: 'individual', full_name: ''
@@ -197,7 +262,11 @@ function App() {
   const setupMFA = async () => {
     try {
       const response = await axios.post(`${API}/auth/setup-mfa`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       setMfaSetup(response.data);
       setShowMFASetup(true);
@@ -210,7 +279,11 @@ function App() {
   const enableMFA = async (mfaToken) => {
     try {
       await axios.post(`${API}/auth/enable-mfa?mfa_token=${mfaToken}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       toast.success('MFA enabled successfully!');
       setShowMFASetup(false);
@@ -227,7 +300,11 @@ function App() {
     
     try {
       await axios.post(`${API}/health-records`, recordForm, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       
       toast.success('Health record created successfully!');
@@ -247,7 +324,11 @@ function App() {
   const toggleRecordPrivacy = async (recordId, currentStatus) => {
     try {
       await axios.put(`${API}/health-records/${recordId}/privacy?is_public=${!currentStatus}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       
       toast.success('Privacy settings updated!');
@@ -307,6 +388,9 @@ function App() {
             Retry
           </button>
         )}
+      </div>
+      <div className="text-xs text-gray-600 mt-1">
+        Backend: {BACKEND_URL}
       </div>
     </div>
   );
@@ -395,7 +479,7 @@ function App() {
                 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || connectionStatus !== 'connected'}
                   className="btn-professional btn-primary w-full"
                 >
                   {isLoading ? (
@@ -403,6 +487,8 @@ function App() {
                       <div className="loading-spinner w-4 h-4"></div>
                       Signing In...
                     </>
+                  ) : connectionStatus !== 'connected' ? (
+                    'Connecting to Server...'
                   ) : (
                     'Sign In'
                   )}
@@ -485,7 +571,7 @@ function App() {
                 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || connectionStatus !== 'connected'}
                   className="btn-professional btn-primary w-full"
                 >
                   {isLoading ? (
@@ -493,6 +579,8 @@ function App() {
                       <div className="loading-spinner w-4 h-4"></div>
                       Creating Account...
                     </>
+                  ) : connectionStatus !== 'connected' ? (
+                    'Connecting to Server...'
                   ) : (
                     'Create Account'
                   )}

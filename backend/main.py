@@ -29,6 +29,29 @@ app = FastAPI(
     redoc_url="/redoc" if DEBUG else None
 )
 
+# Enhanced CORS middleware - CRITICAL FIX
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for now
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language", 
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "X-CSRF-Token",
+        "X-Process-Time",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers"
+    ],
+    expose_headers=["X-Process-Time"],
+    max_age=3600,
+)
+
 # Request timeout middleware
 @app.middleware("http")
 async def timeout_middleware(request: Request, call_next):
@@ -58,48 +81,31 @@ async def timeout_middleware(request: Request, call_next):
             content={"detail": "Internal server error"}
         )
 
-# CORS middleware - Updated configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=[
-        "Accept",
-        "Accept-Language",
-        "Content-Language",
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "X-CSRF-Token",
-        "X-Process-Time"
-    ],
-    expose_headers=["X-Process-Time"],
-    max_age=3600,  # Cache preflight requests for 1 hour
-)
-
-# Trusted host middleware for security
-if not DEBUG:
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=["*"]  # Configure this properly for production
-    )
-
-# Health check endpoint
+# Enhanced health check endpoint - CRITICAL FIX
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for deployment monitoring"""
+    """Enhanced health check endpoint for deployment monitoring"""
     try:
         # Test database connection
         db = await get_database()
         await db.command('ping')
         
-        return {
-            "status": "healthy",
-            "timestamp": time.time(),
-            "database": "connected",
-            "version": "2.0.0"
-        }
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "healthy",
+                "timestamp": time.time(),
+                "database": "connected",
+                "version": "2.0.0",
+                "cors": "enabled",
+                "backend_url": "https://digital-one-health-system.onrender.com"
+            },
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return JSONResponse(
@@ -107,9 +113,34 @@ async def health_check():
             content={
                 "status": "unhealthy",
                 "timestamp": time.time(),
-                "error": str(e)
+                "error": str(e),
+                "database": "disconnected"
+            },
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS", 
+                "Access-Control-Allow-Headers": "*"
             }
         )
+
+# Root endpoint
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return JSONResponse(
+        content={
+            "message": "Digital One Health System API",
+            "version": "2.0.0",
+            "status": "running",
+            "docs": "/docs",
+            "health": "/health"
+        },
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 # Include routers with error handling
 try:
@@ -124,13 +155,20 @@ except Exception as e:
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
     """Legacy dashboard stats endpoint"""
-    return {
-        "message": "Please use the new MVC endpoints",
-        "new_endpoints": {
-            "blockchain_stats": "/api/blockchain/stats",
-            "health_records": "/api/health-records"
+    return JSONResponse(
+        content={
+            "message": "Please use the new MVC endpoints",
+            "new_endpoints": {
+                "blockchain_stats": "/api/blockchain/stats",
+                "health_records": "/api/health-records"
+            }
+        },
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
         }
-    }
+    )
 
 @app.get("/api/system/status")
 async def system_status():
@@ -144,20 +182,27 @@ async def system_status():
         logger.error(f"Database connection failed: {e}")
         db_status = "disconnected"
     
-    return {
-        "status": "healthy",
-        "version": "2.0.0",
-        "architecture": "MVC",
-        "database": db_status,
-        "cors_origins": CORS_ORIGINS,
-        "request_timeout": REQUEST_TIMEOUT,
-        "features": {
-            "encryption": "AES-256 enabled",
-            "mfa": "TOTP 90-second window",
-            "blockchain": "Proof of Work enabled",
-            "admin_policy": "Single admin enforced"
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "version": "2.0.0",
+            "architecture": "MVC",
+            "database": db_status,
+            "cors_origins": CORS_ORIGINS,
+            "request_timeout": REQUEST_TIMEOUT,
+            "features": {
+                "encryption": "AES-256 enabled",
+                "mfa": "TOTP 90-second window",
+                "blockchain": "Proof of Work enabled",
+                "admin_policy": "Single admin enforced"
+            }
+        },
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
         }
-    }
+    )
 
 # Global exception handler
 @app.exception_handler(Exception)
@@ -165,7 +210,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception: {exc} for request {request.url}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error occurred"}
+        content={"detail": "Internal server error occurred"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
     )
 
 @app.on_event("startup")

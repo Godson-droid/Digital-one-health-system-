@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Backend URL configuration - Updated for your deployment
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://digital-one-health-system.onrender.com';
+// Backend URL configuration - FIXED for your deployment
+const BACKEND_URL = 'https://digital-one-health-system.onrender.com';
 const API = `${BACKEND_URL}/api`;
 
 const BlockchainStats = () => {
@@ -18,7 +18,15 @@ const BlockchainStats = () => {
   const fetchBlockchainStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/blockchain/stats`, { timeout: 30000 });
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/blockchain/stats`, { 
+        timeout: 45000,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       setStats(response.data || {});
     } catch (error) {
       console.error('Failed to fetch blockchain statistics:', error);
@@ -39,7 +47,15 @@ const BlockchainStats = () => {
   const verifyChainIntegrity = async () => {
     setVerifying(true);
     try {
-      const response = await axios.get(`${API}/blockchain/verify-chain`, { timeout: 45000 });
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/blockchain/verify-chain`, { 
+        timeout: 60000,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       if (response.data?.chain_integrity) {
         toast.success('Blockchain integrity verified successfully!');
       } else {
