@@ -20,6 +20,9 @@ axios.interceptors.request.use(
   (config) => {
     console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
     console.log('Request headers:', config.headers);
+    if (config.data) {
+      console.log('Request data:', config.data);
+    }
     return config;
   },
   (error) => {
@@ -42,7 +45,8 @@ axios.interceptors.response.use(
       status: error.response?.status,
       statusText: error.response?.statusText,
       url: error.config?.url,
-      method: error.config?.method
+      method: error.config?.method,
+      data: error.response?.data
     });
     
     if (error.code === 'ECONNABORTED') {
@@ -50,13 +54,17 @@ axios.interceptors.response.use(
     } else if (error.response?.status === 0 || !error.response) {
       toast.error('Cannot connect to server. Please check your connection.');
     } else if (error.response?.status >= 500) {
-      toast.error('Server error. Please try again later.');
+      toast.error(`Server error: ${error.response?.data?.detail || 'Please try again later.'}`);
     } else if (error.response?.status === 401) {
       toast.error('Authentication required. Please log in.');
     } else if (error.response?.status === 403) {
       toast.error('Access denied. Insufficient permissions.');
     } else if (error.response?.status === 404) {
       toast.error('Resource not found.');
+    } else if (error.response?.status === 422) {
+      toast.error(`Validation error: ${error.response?.data?.detail || 'Invalid data provided.'}`);
+    } else if (error.response?.data?.detail) {
+      toast.error(error.response.data.detail);
     }
     
     return Promise.reject(error);
@@ -88,7 +96,7 @@ function App() {
   });
   const [recordForm, setRecordForm] = useState({
     title: '', description: '', record_type: 'human', subject_id: '', 
-    subject_name: '', data: {}, is_public: false
+    subject_name: '', data: { notes: '', vital_signs: '' }, is_public: false
   });
 
   // Check connection status on mount
@@ -299,7 +307,29 @@ function App() {
     setIsLoading(true);
     
     try {
-      await axios.post(`${API}/health-records`, recordForm, {
+      console.log('Creating health record with data:', recordForm);
+      
+      // Validate required fields
+      if (!recordForm.title || !recordForm.description || !recordForm.subject_id || !recordForm.subject_name) {
+        toast.error('Please fill in all required fields');
+        setIsLoading(false);
+        return;
+      }
+
+      // Ensure data is properly formatted
+      const recordData = {
+        title: recordForm.title.trim(),
+        description: recordForm.description.trim(),
+        record_type: recordForm.record_type,
+        subject_id: recordForm.subject_id.trim(),
+        subject_name: recordForm.subject_name.trim(),
+        data: recordForm.data || { notes: '', vital_signs: '' },
+        is_public: recordForm.is_public
+      };
+
+      console.log('Sending record data:', recordData);
+      
+      const response = await axios.post(`${API}/health-records`, recordData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Accept': 'application/json',
@@ -307,15 +337,25 @@ function App() {
         }
       });
       
+      console.log('Health record creation response:', response.data);
       toast.success('Health record created successfully!');
+      
+      // Reset form
       setRecordForm({
         title: '', description: '', record_type: 'human', subject_id: '', 
-        subject_name: '', data: {}, is_public: false
+        subject_name: '', data: { notes: '', vital_signs: '' }, is_public: false
       });
+      
+      // Reload dashboard data
       loadDashboardData();
+      
+      // Switch to records tab to see the new record
+      setActiveTab('records');
+      
     } catch (error) {
       console.error('Failed to create health record:', error);
-      toast.error('Failed to create health record');
+      const errorMessage = error.response?.data?.detail || 'Failed to create health record';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -364,7 +404,7 @@ function App() {
 
   // Connection Status Component - FIXED POSITIONING
   const ConnectionStatus = () => (
-    <div className={`fixed bottom-4 right-4 z-50 px-3 py-2 rounded-lg text-sm font-medium shadow-lg ${
+    <div className={`fixed bottom-4 right-4 z-40 px-3 py-2 rounded-lg text-sm font-medium shadow-lg ${
       connectionStatus === 'connected' 
         ? 'bg-green-100 text-green-800 border border-green-200' 
         : connectionStatus === 'disconnected'
@@ -850,23 +890,25 @@ function App() {
             <div className="professional-card p-8">
               <form onSubmit={createHealthRecord} className="space-y-6">
                 <div>
-                  <label className="form-label-professional">Title</label>
+                  <label className="form-label-professional">Title *</label>
                   <input
                     type="text"
                     value={recordForm.title}
                     onChange={(e) => setRecordForm({...recordForm, title: e.target.value})}
                     className="form-input-professional"
+                    placeholder="e.g., Annual Checkup, Blood Test Results"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="form-label-professional">Description</label>
+                  <label className="form-label-professional">Description *</label>
                   <textarea
                     value={recordForm.description}
                     onChange={(e) => setRecordForm({...recordForm, description: e.target.value})}
                     className="form-input-professional"
                     rows={3}
+                    placeholder="Detailed description of the health record"
                     required
                   />
                 </div>
@@ -887,44 +929,58 @@ function App() {
                   </div>
                   
                   <div>
-                    <label className="form-label-professional">Subject ID</label>
+                    <label className="form-label-professional">Subject ID *</label>
                     <input
                       type="text"
                       value={recordForm.subject_id}
                       onChange={(e) => setRecordForm({...recordForm, subject_id: e.target.value})}
                       className="form-input-professional"
+                      placeholder="e.g., PAT001, DOG123"
                       required
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="form-label-professional">Subject Name</label>
+                  <label className="form-label-professional">Subject Name *</label>
                   <input
                     type="text"
                     value={recordForm.subject_name}
                     onChange={(e) => setRecordForm({...recordForm, subject_name: e.target.value})}
                     className="form-input-professional"
+                    placeholder="Name of the patient/subject"
                     required
                   />
                 </div>
                 
-                <div>
-                  <label className="form-label-professional">Medical Data (JSON format)</label>
-                  <textarea
-                    value={JSON.stringify(recordForm.data, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        const data = JSON.parse(e.target.value);
-                        setRecordForm({...recordForm, data});
-                      } catch (error) {
-                        // Invalid JSON, keep the text for user to fix
-                      }
-                    }}
-                    className="form-input-professional font-mono"
-                    rows={6}
-                    placeholder='{"notes": "Patient notes", "vital_signs": "120/80 mmHg"}'
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label-professional">Notes</label>
+                    <textarea
+                      value={recordForm.data.notes || ''}
+                      onChange={(e) => setRecordForm({
+                        ...recordForm, 
+                        data: { ...recordForm.data, notes: e.target.value }
+                      })}
+                      className="form-input-professional"
+                      rows={3}
+                      placeholder="Clinical notes, observations, etc."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="form-label-professional">Vital Signs</label>
+                    <textarea
+                      value={recordForm.data.vital_signs || ''}
+                      onChange={(e) => setRecordForm({
+                        ...recordForm, 
+                        data: { ...recordForm.data, vital_signs: e.target.value }
+                      })}
+                      className="form-input-professional"
+                      rows={3}
+                      placeholder="Blood pressure, temperature, etc."
+                    />
+                  </div>
                 </div>
                 
                 <div className="flex items-center">

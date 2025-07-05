@@ -15,159 +15,236 @@ class HealthRecordController:
 
     async def create_health_record(self, record_data: HealthRecordCreate, current_user: User) -> dict:
         """Create a new health record with blockchain integrity"""
-        # Check permissions
-        if current_user.role not in ["healthcare_provider", "individual"]:
+        try:
+            # Check permissions
+            if current_user.role not in ["healthcare_provider", "individual", "admin"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions to create records"
+                )
+
+            # Create record
+            record = await self.health_record_service.create_record(record_data, current_user.id)
+            
+            # Add to blockchain for integrity - with error handling
+            try:
+                data_hash = self.blockchain_service.calculate_hash(record.dict())
+                block = await self.blockchain_service.add_block(
+                    record_id=record.id,
+                    action="create",
+                    data_hash=data_hash,
+                    user_id=current_user.id
+                )
+                
+                # Update record with blockchain info
+                await self.health_record_service.update_blockchain_info(
+                    record.id, block.hash, block.index
+                )
+            except Exception as blockchain_error:
+                print(f"Warning: Blockchain logging failed: {blockchain_error}")
+                # Don't fail the record creation if blockchain fails
+
+            return {"message": "Health record created successfully", "record_id": record.id}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Error creating health record: {e}")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions to create records"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create health record: {str(e)}"
             )
-
-        # Create record
-        record = await self.health_record_service.create_record(record_data, current_user.id)
-        
-        # Add to blockchain for integrity
-        data_hash = self.blockchain_service.calculate_hash(record.dict())
-        block = await self.blockchain_service.add_block(
-            record_id=record.id,
-            action="create",
-            data_hash=data_hash,
-            user_id=current_user.id
-        )
-        
-        # Update record with blockchain info
-        await self.health_record_service.update_blockchain_info(
-            record.id, block.hash, block.index
-        )
-
-        return {"message": "Health record created successfully", "record_id": record.id}
 
     async def get_health_records(self, current_user: User) -> List[Dict[str, Any]]:
         """Get health records based on user role and permissions"""
-        records = await self.health_record_service.get_records_for_user(current_user)
-        
-        # Verify blockchain integrity for each record
-        verified_records = []
-        for record in records:
-            is_verified = await self.blockchain_service.verify_record_integrity(record.id)
-            record_dict = record.dict()
-            record_dict["is_verified"] = is_verified
-            verified_records.append(record_dict)
-        
-        return verified_records
+        try:
+            records = await self.health_record_service.get_records_for_user(current_user)
+            
+            # Verify blockchain integrity for each record
+            verified_records = []
+            for record in records:
+                try:
+                    is_verified = await self.blockchain_service.verify_record_integrity(record.id)
+                except Exception as e:
+                    print(f"Warning: Blockchain verification failed for record {record.id}: {e}")
+                    is_verified = False
+                    
+                record_dict = record.dict()
+                record_dict["is_verified"] = is_verified
+                verified_records.append(record_dict)
+            
+            return verified_records
+        except Exception as e:
+            print(f"Error getting health records: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get health records: {str(e)}"
+            )
 
     async def get_health_record(self, record_id: str, current_user: User) -> Dict[str, Any]:
         """Get a specific health record with integrity check"""
-        record = await self.health_record_service.get_record_by_id(record_id)
-        if not record:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Record not found"
-            )
+        try:
+            record = await self.health_record_service.get_record_by_id(record_id)
+            if record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Record not found"
+                )
 
-        # Check access permissions
-        if not check_record_access(record, current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
+            # Check access permissions
+            if not check_record_access(record, current_user):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied"
+                )
 
-        # Verify blockchain integrity
-        is_verified = await self.blockchain_service.verify_record_integrity(record_id)
-        
-        record_dict = record.dict()
-        record_dict["is_verified"] = is_verified
-        
-        return record_dict
+            # Verify blockchain integrity
+            try:
+                is_verified = await self.blockchain_service.verify_record_integrity(record_id)
+            except Exception as e:
+                print(f"Warning: Blockchain verification failed: {e}")
+                is_verified = False
+            
+            record_dict = record.dict()
+            record_dict["is_verified"] = is_verified
+            
+            return record_dict
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Error getting health record: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get health record: {str(e)}"
+            )
 
     async def update_health_record(self, record_id: str, update_data: HealthRecordUpdate, current_user: User) -> dict:
         """Update a health record and log to blockchain"""
-        record = await self.health_record_service.get_record_by_id(record_id)
-        if not record:
+        try:
+            record = await self.health_record_service.get_record_by_id(record_id)
+            if record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Record not found"
+                )
+
+            # Check modification permissions
+            if not can_modify_record(record, current_user):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied"
+                )
+
+            # Update record
+            updated_record = await self.health_record_service.update_record(record_id, update_data)
+            
+            # Add update to blockchain
+            try:
+                data_hash = self.blockchain_service.calculate_hash(updated_record.dict())
+                block = await self.blockchain_service.add_block(
+                    record_id=record_id,
+                    action="update",
+                    data_hash=data_hash,
+                    user_id=current_user.id
+                )
+                
+                # Update blockchain info
+                await self.health_record_service.update_blockchain_info(
+                    record_id, block.hash, block.index
+                )
+            except Exception as blockchain_error:
+                print(f"Warning: Blockchain logging failed: {blockchain_error}")
+
+            return {"message": "Health record updated successfully"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Error updating health record: {e}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Record not found"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update health record: {str(e)}"
             )
-
-        # Check modification permissions
-        if not can_modify_record(record, current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        # Update record
-        updated_record = await self.health_record_service.update_record(record_id, update_data)
-        
-        # Add update to blockchain
-        data_hash = self.blockchain_service.calculate_hash(updated_record.dict())
-        block = await self.blockchain_service.add_block(
-            record_id=record_id,
-            action="update",
-            data_hash=data_hash,
-            user_id=current_user.id
-        )
-        
-        # Update blockchain info
-        await self.health_record_service.update_blockchain_info(
-            record_id, block.hash, block.index
-        )
-
-        return {"message": "Health record updated successfully"}
 
     async def update_record_privacy(self, record_id: str, is_public: bool, current_user: User) -> dict:
         """Update privacy settings for a record"""
-        record = await self.health_record_service.get_record_by_id(record_id)
-        if not record:
+        try:
+            record = await self.health_record_service.get_record_by_id(record_id)
+            if record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Record not found"
+                )
+
+            # Check modification permissions
+            if not can_modify_record(record, current_user):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied"
+                )
+
+            # Update privacy
+            await self.health_record_service.update_privacy(record_id, is_public)
+            
+            # Log privacy change to blockchain
+            try:
+                privacy_data = {"record_id": record_id, "is_public": is_public, "changed_by": current_user.id}
+                data_hash = self.blockchain_service.calculate_hash(privacy_data)
+                await self.blockchain_service.add_block(
+                    record_id=record_id,
+                    action="privacy_change",
+                    data_hash=data_hash,
+                    user_id=current_user.id
+                )
+            except Exception as blockchain_error:
+                print(f"Warning: Blockchain logging failed: {blockchain_error}")
+
+            return {"message": "Privacy settings updated successfully"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Error updating privacy: {e}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Record not found"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update privacy: {str(e)}"
             )
-
-        # Check modification permissions
-        if not can_modify_record(record, current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        # Update privacy
-        await self.health_record_service.update_privacy(record_id, is_public)
-        
-        # Log privacy change to blockchain
-        privacy_data = {"record_id": record_id, "is_public": is_public, "changed_by": current_user.id}
-        data_hash = self.blockchain_service.calculate_hash(privacy_data)
-        await self.blockchain_service.add_block(
-            record_id=record_id,
-            action="privacy_change",
-            data_hash=data_hash,
-            user_id=current_user.id
-        )
-
-        return {"message": "Privacy settings updated successfully"}
 
     async def verify_record_integrity(self, record_id: str, current_user: User) -> dict:
         """Verify the blockchain integrity of a specific record"""
-        record = await self.health_record_service.get_record_by_id(record_id)
-        if not record:
+        try:
+            record = await self.health_record_service.get_record_by_id(record_id)
+            if record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Record not found"
+                )
+
+            # Check access permissions
+            if not check_record_access(record, current_user):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied"
+                )
+
+            # Perform integrity check
+            try:
+                integrity_result = await self.blockchain_service.verify_record_integrity(record_id)
+                blockchain_history = await self.blockchain_service.get_record_history(record_id)
+            except Exception as e:
+                print(f"Warning: Blockchain verification failed: {e}")
+                integrity_result = False
+                blockchain_history = []
+
+            return {
+                "record_id": record_id,
+                "is_verified": integrity_result,
+                "blockchain_history": blockchain_history,
+                "verified_at": datetime.utcnow()
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Error verifying record integrity: {e}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Record not found"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to verify record integrity: {str(e)}"
             )
-
-        # Check access permissions
-        if not check_record_access(record, current_user):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        # Perform integrity check
-        integrity_result = await self.blockchain_service.verify_record_integrity(record_id)
-        blockchain_history = await self.blockchain_service.get_record_history(record_id)
-
-        return {
-            "record_id": record_id,
-            "is_verified": integrity_result,
-            "blockchain_history": blockchain_history,
-            "verified_at": datetime.utcnow()
-        }

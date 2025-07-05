@@ -13,7 +13,7 @@ class BlockchainService:
         self.difficulty = 1  # Reset to 1 for easier deployment and faster mining
 
     async def get_db(self):
-        if not self.db:
+        if self.db is None:
             self.db = await get_database()
         return self.db
 
@@ -66,7 +66,9 @@ class BlockchainService:
                 {},
                 sort=[("index", -1)]
             )
-            return Block(**latest_block_data) if latest_block_data else None
+            if latest_block_data is not None:
+                return Block(**latest_block_data)
+            return None
         except Exception as e:
             print(f"Error getting latest block: {e}")
             return None
@@ -104,7 +106,7 @@ class BlockchainService:
             latest_block = await self.get_latest_block()
             
             # Create genesis block if chain is empty
-            if not latest_block:
+            if latest_block is None:
                 genesis_block = await self.create_genesis_block()
                 await db.blockchain.insert_one(genesis_block.dict())
                 latest_block = genesis_block
@@ -150,17 +152,22 @@ class BlockchainService:
             
             blocks = [Block(**block_data) for block_data in blocks_data]
             
-            for i in range(1, len(blocks)):
+            # Verify each block
+            for i in range(len(blocks)):
                 current_block = blocks[i]
-                previous_block = blocks[i - 1]
                 
                 # Verify current block's hash
-                if current_block.hash != self.calculate_block_hash(current_block):
+                calculated_hash = self.calculate_block_hash(current_block)
+                if current_block.hash != calculated_hash:
+                    print(f"Block {i} hash mismatch: expected {current_block.hash}, got {calculated_hash}")
                     return False
                 
-                # Verify link to previous block
-                if current_block.previous_hash != previous_block.hash:
-                    return False
+                # Verify link to previous block (skip genesis block)
+                if i > 0:
+                    previous_block = blocks[i - 1]
+                    if current_block.previous_hash != previous_block.hash:
+                        print(f"Block {i} previous hash mismatch")
+                        return False
             
             return True
         except Exception as e:
@@ -207,13 +214,14 @@ class BlockchainService:
             history = []
             for block_data in blocks_data:
                 block = Block(**block_data)
+                calculated_hash = self.calculate_block_hash(block)
                 history.append({
                     "block_index": block.index,
                     "timestamp": block.timestamp,
                     "action": block.data.action,
                     "user_id": block.data.user_id,
                     "hash": block.hash,
-                    "is_valid": block.hash == self.calculate_block_hash(block)
+                    "is_valid": block.hash == calculated_hash
                 })
             
             return history
@@ -236,7 +244,7 @@ class BlockchainService:
             
             return {
                 "total_blocks": total_blocks,
-                "latest_block_index": latest_block.index if latest_block else -1,
+                "latest_block_index": latest_block.index if latest_block is not None else -1,
                 "chain_integrity": is_chain_valid,
                 "difficulty": self.difficulty
             }
@@ -256,7 +264,7 @@ class BlockchainService:
             
             # Get the record
             record = await db.health_records.find_one({"id": record_id})
-            if not record:
+            if record is None:
                 raise ValueError("Record not found")
             
             # Calculate current hash of record
@@ -285,3 +293,35 @@ class BlockchainService:
                 current_hash="",
                 block_number=0
             )
+
+    async def rebuild_chain_integrity(self) -> bool:
+        """Rebuild blockchain integrity by recalculating all hashes"""
+        try:
+            db = await self.get_db()
+            
+            # Get all blocks ordered by index
+            blocks_cursor = db.blockchain.find({}).sort("index", 1)
+            blocks_data = await blocks_cursor.to_list(10000)
+            
+            if not blocks_data:
+                return True
+            
+            # Rebuild each block
+            for i, block_data in enumerate(blocks_data):
+                block = Block(**block_data)
+                
+                # Recalculate hash
+                correct_hash = self.calculate_block_hash(block)
+                
+                # Update if hash is incorrect
+                if block.hash != correct_hash:
+                    await db.blockchain.update_one(
+                        {"_id": block_data["_id"]},
+                        {"$set": {"hash": correct_hash}}
+                    )
+                    print(f"Fixed block {i} hash")
+            
+            return True
+        except Exception as e:
+            print(f"Error rebuilding chain integrity: {e}")
+            return False

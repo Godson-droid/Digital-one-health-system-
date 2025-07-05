@@ -13,18 +13,50 @@ async def get_blockchain_stats(
     current_user: User = Depends(auth_controller.get_current_user)
 ):
     """Get blockchain statistics"""
-    return await blockchain_service.get_blockchain_stats()
+    try:
+        return await blockchain_service.get_blockchain_stats()
+    except Exception as e:
+        print(f"Error getting blockchain stats: {e}")
+        return {
+            "total_blocks": 0,
+            "latest_block_index": -1,
+            "chain_integrity": False,
+            "difficulty": 1
+        }
 
 @router.get("/verify-chain")
 async def verify_blockchain_integrity(
     current_user: User = Depends(auth_controller.get_current_user)
 ):
     """Verify the integrity of the entire blockchain"""
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    is_valid = await blockchain_service.verify_chain_integrity()
-    return {"chain_integrity": is_valid}
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        is_valid = await blockchain_service.verify_chain_integrity()
+        return {"chain_integrity": is_valid}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error verifying blockchain integrity: {e}")
+        return {"chain_integrity": False}
+
+@router.post("/rebuild-chain")
+async def rebuild_blockchain_integrity(
+    current_user: User = Depends(auth_controller.get_current_user)
+):
+    """Rebuild blockchain integrity (admin only)"""
+    try:
+        if current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        success = await blockchain_service.rebuild_chain_integrity()
+        return {"success": success, "message": "Chain integrity rebuilt" if success else "Failed to rebuild chain"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error rebuilding blockchain integrity: {e}")
+        return {"success": False, "message": f"Error: {str(e)}"}
 
 @router.get("/record/{record_id}/history", response_model=List[Dict[str, Any]])
 async def get_record_blockchain_history(
@@ -32,4 +64,8 @@ async def get_record_blockchain_history(
     current_user: User = Depends(auth_controller.get_current_user)
 ):
     """Get blockchain history for a specific record"""
-    return await blockchain_service.get_record_history(record_id)
+    try:
+        return await blockchain_service.get_record_history(record_id)
+    except Exception as e:
+        print(f"Error getting record history: {e}")
+        return []
