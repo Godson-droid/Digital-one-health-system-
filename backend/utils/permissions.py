@@ -91,6 +91,33 @@ def can_change_privacy(record: HealthRecordInDB, user: User) -> bool:
         print(f"Error checking privacy change permissions: {e}")
         return False
 
+def can_verify_record(record: HealthRecordInDB, user: User) -> bool:
+    """Check if user can verify a record's blockchain integrity"""
+    try:
+        if not record or not user:
+            return False
+            
+        # Admin can verify all records
+        if user.role == "admin":
+            return True
+        
+        # Record owner/creator can verify their own records
+        if record.owner_id == user.id and record.created_by == user.id:
+            return True
+        
+        # Healthcare providers can verify public records
+        if record.is_public and user.role == "healthcare_provider":
+            return True
+        
+        # Researchers can verify public records
+        if record.is_public and user.role == "researcher":
+            return True
+        
+        return False
+    except Exception as e:
+        print(f"Error checking verification permissions: {e}")
+        return False
+
 def require_role(required_roles: list):
     """Decorator to require specific roles"""
     def decorator(func):
@@ -113,7 +140,7 @@ def get_user_permissions(user: User) -> dict:
             "can_modify_own_records": user.role in ["healthcare_provider", "individual", "admin"],
             "can_modify_any_records": user.role == "admin",
             "can_change_privacy": user.role in ["healthcare_provider", "individual", "admin"],
-            "can_verify_blockchain": True,  # All authenticated users can verify
+            "can_verify_blockchain": True,  # All authenticated users can verify records they have access to
             "can_access_blockchain_stats": True,  # All authenticated users can view stats
         }
         

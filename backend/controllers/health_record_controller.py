@@ -6,7 +6,7 @@ from ..models.health_record import HealthRecordCreate, HealthRecord, HealthRecor
 from ..models.user import User
 from ..services.health_record_service import HealthRecordService
 from ..services.blockchain_service import BlockchainService
-from ..utils.permissions import check_record_access, can_modify_record, can_change_privacy
+from ..utils.permissions import check_record_access, can_modify_record, can_change_privacy, can_verify_record
 
 class HealthRecordController:
     def __init__(self):
@@ -77,6 +77,7 @@ class HealthRecordController:
                 record_dict["can_modify"] = can_modify_record(record, current_user)
                 record_dict["can_change_privacy"] = can_change_privacy(record, current_user)
                 record_dict["can_view_details"] = check_record_access(record, current_user)
+                record_dict["can_verify"] = can_verify_record(record, current_user)
                 
                 verified_records.append(record_dict)
             
@@ -118,6 +119,7 @@ class HealthRecordController:
             # Add permission flags
             record_dict["can_modify"] = can_modify_record(record, current_user)
             record_dict["can_change_privacy"] = can_change_privacy(record, current_user)
+            record_dict["can_verify"] = can_verify_record(record, current_user)
             
             return record_dict
         except HTTPException:
@@ -231,8 +233,8 @@ class HealthRecordController:
                     detail="Record not found"
                 )
 
-            # Check access permissions
-            if not check_record_access(record, current_user):
+            # Check verification permissions - ENHANCED PERMISSIONS
+            if not can_verify_record(record, current_user):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access denied - you don't have permission to verify this record"
