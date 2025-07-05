@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import time
@@ -32,7 +31,7 @@ app = FastAPI(
 # Enhanced CORS middleware - CRITICAL FIX
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now
+    allow_origins=["*"],  # Allow all origins for deployment
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=[
@@ -72,13 +71,23 @@ async def timeout_middleware(request: Request, call_next):
         logger.error(f"Request timeout after {REQUEST_TIMEOUT} seconds for {request.url}")
         return JSONResponse(
             status_code=408,
-            content={"detail": f"Request timeout after {REQUEST_TIMEOUT} seconds"}
+            content={"detail": f"Request timeout after {REQUEST_TIMEOUT} seconds"},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
         )
     except Exception as e:
         logger.error(f"Request processing error: {e}")
         return JSONResponse(
             status_code=500,
-            content={"detail": "Internal server error"}
+            content={"detail": "Internal server error"},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
         )
 
 # Enhanced health check endpoint - CRITICAL FIX
@@ -88,14 +97,18 @@ async def health_check():
     try:
         # Test database connection
         db = await get_database()
-        await db.command('ping')
+        if db is not None:
+            await db.command('ping')
+            db_status = "connected"
+        else:
+            db_status = "disconnected"
         
         return JSONResponse(
             status_code=200,
             content={
                 "status": "healthy",
                 "timestamp": time.time(),
-                "database": "connected",
+                "database": db_status,
                 "version": "2.0.0",
                 "cors": "enabled",
                 "backend_url": "https://digital-one-health-system.onrender.com"
@@ -176,8 +189,11 @@ async def system_status():
     try:
         # Test database connection
         db = await get_database()
-        await db.command('ping')
-        db_status = "connected"
+        if db is not None:
+            await db.command('ping')
+            db_status = "connected"
+        else:
+            db_status = "disconnected"
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
         db_status = "disconnected"
@@ -228,8 +244,11 @@ async def startup_event():
         
         # Test database connection with timeout
         try:
-            db = await asyncio.wait_for(get_database(), timeout=10)
-            logger.info("Database connection established")
+            db = await asyncio.wait_for(get_database(), timeout=15)
+            if db is not None:
+                logger.info("Database connection established")
+            else:
+                logger.error("Database connection returned None")
         except asyncio.TimeoutError:
             logger.error("Database connection timeout during startup")
         except Exception as e:
@@ -239,7 +258,7 @@ async def startup_event():
         try:
             user_service = UserService()
             admin_user = await user_service.create_default_admin()
-            if admin_user:
+            if admin_user is not None:
                 logger.info("Default admin user setup completed")
             else:
                 logger.info("Admin user already exists or creation failed")

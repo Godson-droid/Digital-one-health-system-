@@ -1,8 +1,8 @@
+import logging
+import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import os
-import logging
-import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 db_name = os.environ.get('DB_NAME', 'digital_one_health')
-database_timeout = int(os.environ.get('DATABASE_TIMEOUT', '10'))
+database_timeout = int(os.environ.get('DATABASE_TIMEOUT', '20'))
 
 client = None
 database = None
@@ -21,7 +21,7 @@ async def get_database() -> AsyncIOMotorDatabase:
     global client, database
     
     try:
-        if not client:
+        if client is None or database is None:
             logger.info(f"Connecting to MongoDB: {mongo_url}")
             
             # Configure client with timeouts
@@ -58,11 +58,12 @@ async def get_database() -> AsyncIOMotorDatabase:
 
 async def close_database():
     """Close database connection"""
-    global client
+    global client, database
     try:
-        if client:
+        if client is not None:
             client.close()
             client = None
+            database = None
             logger.info("MongoDB connection closed")
     except Exception as e:
         logger.error(f"Error closing database connection: {e}")
@@ -71,8 +72,10 @@ async def test_database_connection():
     """Test database connection"""
     try:
         db = await get_database()
-        await db.command('ping')
-        return True
+        if db is not None:
+            await db.command('ping')
+            return True
+        return False
     except Exception as e:
         logger.error(f"Database connection test failed: {e}")
         return False

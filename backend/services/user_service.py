@@ -11,7 +11,7 @@ class UserService:
         self.db: AsyncIOMotorDatabase = None
 
     async def get_db(self):
-        if not self.db:
+        if self.db is None:
             self.db = await get_database()
         return self.db
 
@@ -39,7 +39,9 @@ class UserService:
         try:
             db = await self.get_db()
             user_data = await db.users.find_one({"username": username})
-            return UserInDB(**user_data) if user_data else None
+            if user_data is not None:
+                return UserInDB(**user_data)
+            return None
         except Exception as e:
             print(f"Error getting user by username: {e}")
             return None
@@ -49,7 +51,9 @@ class UserService:
         try:
             db = await self.get_db()
             user_data = await db.users.find_one({"id": user_id})
-            return UserInDB(**user_data) if user_data else None
+            if user_data is not None:
+                return UserInDB(**user_data)
+            return None
         except Exception as e:
             print(f"Error getting user by ID: {e}")
             return None
@@ -61,7 +65,9 @@ class UserService:
             user_data = await db.users.find_one({
                 "$or": [{"username": username}, {"email": email}]
             })
-            return UserInDB(**user_data) if user_data else None
+            if user_data is not None:
+                return UserInDB(**user_data)
+            return None
         except Exception as e:
             print(f"Error checking user existence: {e}")
             return None
@@ -71,7 +77,9 @@ class UserService:
         try:
             db = await self.get_db()
             user_data = await db.users.find_one({"role": "admin"})
-            return UserInDB(**user_data) if user_data else None
+            if user_data is not None:
+                return UserInDB(**user_data)
+            return None
         except Exception as e:
             print(f"Error getting admin user: {e}")
             return None
@@ -81,7 +89,7 @@ class UserService:
         try:
             # Check if admin already exists
             existing_admin = await self.get_admin_user()
-            if existing_admin:
+            if existing_admin is not None:
                 return existing_admin
 
             # Create default admin
@@ -149,7 +157,7 @@ class UserService:
             db = await self.get_db()
             users_cursor = db.users.find({})
             users = await users_cursor.to_list(1000)
-            return [UserInDB(**user) for user in users]
+            return [UserInDB(**user) for user in users if user is not None]
         except Exception as e:
             print(f"Error getting all users: {e}")
             return []
