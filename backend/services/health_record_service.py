@@ -84,22 +84,44 @@ class HealthRecordService:
             return None
 
     async def get_records_for_user(self, user: User) -> List[HealthRecordInDB]:
-        """Get health records based on user role and permissions"""
+        """Get health records based on user role and permissions - FIXED PUBLIC RECORD ACCESS"""
         try:
             db = await self.get_db()
             
-            # Build query based on user role
+            # Build query based on user role - ENHANCED FOR PUBLIC RECORD VISIBILITY
             query = {}
             if user.role == "individual":
-                query = {"owner_id": user.id}
+                # Individual users can see:
+                # 1. Their own records (both public and private)
+                # 2. Public records from other users
+                query = {
+                    "$or": [
+                        {"owner_id": user.id},  # Own records
+                        {"is_public": True}     # Public records from others
+                    ]
+                }
             elif user.role == "healthcare_provider":
-                query = {"$or": [{"owner_id": user.id}, {"is_public": True}]}
+                # Healthcare providers can see:
+                # 1. Their own records
+                # 2. All public records
+                query = {
+                    "$or": [
+                        {"owner_id": user.id},  # Own records
+                        {"is_public": True}     # All public records
+                    ]
+                }
             elif user.role == "researcher":
+                # Researchers can see:
+                # 1. All public records only
                 query = {"is_public": True}
             # Admin can see all records (no query filter)
             
+            print(f"Query for user {user.username} (role: {user.role}): {query}")
+            
             records_cursor = db.health_records.find(query)
             records = await records_cursor.to_list(1000)
+            
+            print(f"Found {len(records)} records for user {user.username}")
             
             # Decrypt data for authorized users
             decrypted_records = []
@@ -109,7 +131,7 @@ class HealthRecordService:
                         # Check if user has access to decrypt
                         if (user.role == "admin" or 
                             record_data["owner_id"] == user.id or
-                            (record_data["is_public"] and user.role in ["healthcare_provider", "researcher"])):
+                            (record_data["is_public"] and user.role in ["healthcare_provider", "researcher", "individual"])):
                             decrypted_data = decrypt_data(record_data["data"]["encrypted"])
                             record_data["data"] = json.loads(decrypted_data)
                         else:
@@ -228,12 +250,22 @@ class HealthRecordService:
         try:
             db = await self.get_db()
             
-            # Build query based on user role
+            # Build query based on user role - ENHANCED FOR PUBLIC RECORD VISIBILITY
             query = {}
             if user.role == "individual":
-                query = {"owner_id": user.id}
+                query = {
+                    "$or": [
+                        {"owner_id": user.id},  # Own records
+                        {"is_public": True}     # Public records from others
+                    ]
+                }
             elif user.role == "healthcare_provider":
-                query = {"$or": [{"owner_id": user.id}, {"is_public": True}]}
+                query = {
+                    "$or": [
+                        {"owner_id": user.id},  # Own records
+                        {"is_public": True}     # All public records
+                    ]
+                }
             elif user.role == "researcher":
                 query = {"is_public": True}
             
