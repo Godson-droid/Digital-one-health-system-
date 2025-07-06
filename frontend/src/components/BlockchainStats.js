@@ -10,6 +10,7 @@ const BlockchainStats = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [repairing, setRepairing] = useState(false);
 
   useEffect(() => {
     fetchBlockchainStats();
@@ -30,7 +31,7 @@ const BlockchainStats = () => {
       setStats(response.data || {});
     } catch (error) {
       console.error('Failed to fetch blockchain statistics:', error);
-      // Don't show error toast for blockchain stats - handle silently
+      // Set default stats on error
       setStats({
         total_blocks: 0,
         latest_block_index: -1,
@@ -54,17 +55,50 @@ const BlockchainStats = () => {
           'Content-Type': 'application/json'
         }
       });
+      
       if (response.data?.chain_integrity) {
         toast.success('Blockchain integrity verified successfully!');
+        if (response.data?.repaired) {
+          toast.info('Chain integrity issues were detected and automatically repaired!');
+        }
       } else {
-        toast.error('Blockchain integrity check failed!');
+        toast.warning('Blockchain integrity issues detected. Auto-repair in progress...');
       }
+      
       fetchBlockchainStats(); // Refresh stats
     } catch (error) {
       console.error('Failed to verify blockchain integrity:', error);
-      // Don't show error toast for verification failures
+      toast.error('Failed to verify blockchain integrity');
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const autoRepairChain = async () => {
+    setRepairing(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/blockchain/auto-repair`, {}, { 
+        timeout: 120000, // 2 minutes for repair
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data?.success) {
+        toast.success('Blockchain auto-repair completed successfully!');
+      } else {
+        toast.error('Blockchain auto-repair failed');
+      }
+      
+      fetchBlockchainStats(); // Refresh stats
+    } catch (error) {
+      console.error('Failed to auto-repair blockchain:', error);
+      toast.error('Failed to auto-repair blockchain');
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -82,6 +116,9 @@ const BlockchainStats = () => {
     );
   }
 
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = currentUser.role === 'admin';
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
@@ -97,25 +134,49 @@ const BlockchainStats = () => {
           </div>
         </div>
         
-        <button
-          onClick={verifyChainIntegrity}
-          disabled={verifying}
-          className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-        >
-          {verifying ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Verifying...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span>Verify Chain</span>
-            </>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <button
+            onClick={verifyChainIntegrity}
+            disabled={verifying || repairing}
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            {verifying ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Verifying...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>Verify Chain</span>
+              </>
+            )}
+          </button>
+
+          {isAdmin && !stats?.chain_integrity && (
+            <button
+              onClick={autoRepairChain}
+              disabled={verifying || repairing}
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {repairing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Repairing...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Auto-Repair</span>
+                </>
+              )}
+            </button>
           )}
-        </button>
+        </div>
       </div>
 
       {stats && (
@@ -190,9 +251,14 @@ const BlockchainStats = () => {
                 }`}>
                   {stats.chain_integrity 
                     ? 'All blocks verified and linked correctly' 
-                    : 'Chain integrity issues detected - verification in progress'
+                    : 'Chain integrity issues detected - auto-repair available'
                   }
                 </p>
+                {!stats.chain_integrity && isAdmin && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Click "Auto-Repair" to fix integrity issues automatically
+                  </p>
+                )}
               </div>
               <svg className={`w-6 h-6 ${
                 stats.chain_integrity ? 'text-green-500' : 'text-red-500'
@@ -237,7 +303,7 @@ const BlockchainStats = () => {
                 <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Tamper-Proof Verification</span>
+                <span>Auto-Repair Capability</span>
               </div>
             </div>
           </div>

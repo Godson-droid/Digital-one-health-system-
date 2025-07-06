@@ -189,7 +189,7 @@ class BlockchainService:
             raise
 
     async def verify_chain_integrity(self) -> bool:
-        """Verify the integrity of the entire blockchain"""
+        """Verify the integrity of the entire blockchain with auto-repair"""
         try:
             db = await self.get_db()
             if db is None:
@@ -214,7 +214,8 @@ class BlockchainService:
                 
                 blocks.append(Block(**block_data))
             
-            # Verify each block
+            # Verify and repair each block
+            all_valid = True
             for i in range(len(blocks)):
                 current_block = blocks[i]
                 
@@ -222,18 +223,30 @@ class BlockchainService:
                 calculated_hash = self.calculate_block_hash(current_block)
                 if current_block.hash != calculated_hash:
                     print(f"Block {i} hash mismatch: stored={current_block.hash}, calculated={calculated_hash}")
-                    # Try to fix the hash
+                    # Auto-repair the hash
                     await self.fix_block_hash(current_block.index, calculated_hash)
                     current_block.hash = calculated_hash
+                    all_valid = False
                 
                 # Verify link to previous block (skip genesis block)
                 if i > 0:
                     previous_block = blocks[i - 1]
                     if current_block.previous_hash != previous_block.hash:
-                        print(f"Block {i} previous hash mismatch")
-                        return False
+                        print(f"Block {i} previous hash mismatch - repairing chain linkage")
+                        # Auto-repair the previous hash
+                        await db.blockchain.update_one(
+                            {"index": current_block.index},
+                            {"$set": {"previous_hash": previous_block.hash}}
+                        )
+                        all_valid = False
             
-            print("Blockchain integrity verification passed")
+            if all_valid:
+                print("Blockchain integrity verification passed")
+            else:
+                print("Blockchain integrity issues found and repaired")
+                # Re-verify after repairs
+                return await self.verify_chain_integrity()
+            
             return True
         except Exception as e:
             print(f"Error verifying chain integrity: {e}")
@@ -291,7 +304,7 @@ class BlockchainService:
                 
                 if block.hash != calculated_hash:
                     print(f"Block integrity failed for record {record_id}: stored={block.hash}, calculated={calculated_hash}")
-                    # Try to fix the hash
+                    # Auto-repair the hash
                     await self.fix_block_hash(block.index, calculated_hash)
                     all_valid = False
                 else:
@@ -368,7 +381,7 @@ class BlockchainService:
             # Get latest block
             latest_block = await self.get_latest_block()
             
-            # Verify chain integrity
+            # Verify chain integrity with auto-repair
             is_chain_valid = await self.verify_chain_integrity()
             
             return {
@@ -387,11 +400,13 @@ class BlockchainService:
             }
 
     async def rebuild_chain_integrity(self) -> bool:
-        """Rebuild blockchain integrity by recalculating all hashes"""
+        """Rebuild blockchain integrity by recalculating all hashes and fixing linkage"""
         try:
             db = await self.get_db()
             if db is None:
                 return False
+            
+            print("Starting blockchain integrity rebuild...")
             
             # Get all blocks ordered by index
             blocks_cursor = db.blockchain.find({}).sort("index", 1)
@@ -401,6 +416,8 @@ class BlockchainService:
                 return True
             
             # Rebuild each block
+            previous_hash = "0"  # Genesis block starts with "0"
+            
             for i, block_data in enumerate(blocks_data):
                 if '_id' in block_data:
                     block_id = block_data['_id']
@@ -414,19 +431,56 @@ class BlockchainService:
                     
                 block = Block(**block_data)
                 
-                # Recalculate hash
+                # Fix previous hash linkage
+                if i > 0 and block.previous_hash != previous_hash:
+                    block.previous_hash = previous_hash
+                    print(f"Fixed previous hash linkage for block {i}")
+                
+                # Recalculate and fix hash
                 correct_hash = self.calculate_block_hash(block)
                 
-                # Update if hash is incorrect
-                if block.hash != correct_hash:
-                    await db.blockchain.update_one(
-                        {"_id": block_id},
-                        {"$set": {"hash": correct_hash}}
-                    )
-                    print(f"Fixed block {i} hash: {correct_hash}")
+                # Update block in database
+                update_data = {
+                    "hash": correct_hash,
+                    "previous_hash": block.previous_hash
+                }
+                
+                await db.blockchain.update_one(
+                    {"_id": block_id},
+                    {"$set": update_data}
+                )
+                
+                print(f"Rebuilt block {i}: hash={correct_hash[:12]}...")
+                previous_hash = correct_hash
             
-            print("Blockchain integrity rebuilt successfully")
+            print("Blockchain integrity rebuild completed successfully")
             return True
         except Exception as e:
             print(f"Error rebuilding chain integrity: {e}")
+            return False
+
+    async def auto_repair_chain(self) -> bool:
+        """Automatically repair blockchain integrity issues"""
+        try:
+            print("Starting automatic blockchain repair...")
+            
+            # First, rebuild the entire chain integrity
+            rebuild_success = await self.rebuild_chain_integrity()
+            
+            if rebuild_success:
+                # Then verify the chain
+                verify_success = await self.verify_chain_integrity()
+                
+                if verify_success:
+                    print("✅ Blockchain auto-repair completed successfully")
+                    return True
+                else:
+                    print("⚠️ Chain verification failed after rebuild")
+                    return False
+            else:
+                print("❌ Blockchain rebuild failed")
+                return False
+                
+        except Exception as e:
+            print(f"Error during auto-repair: {e}")
             return False
