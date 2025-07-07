@@ -40,7 +40,7 @@ axios.interceptors.request.use(
   }
 );
 
-// Add response interceptor for debugging and error handling
+// FIXED: Response interceptor - don't show automatic error toasts
 axios.interceptors.response.use(
   (response) => {
     console.log(`✅ API Response: ${response.status} ${response.config.url}`);
@@ -49,17 +49,16 @@ axios.interceptors.response.use(
   (error) => {
     console.error('❌ API Error:', error);
     
+    // Only show automatic toasts for connection/timeout errors
     if (error.code === 'ECONNABORTED') {
-      toast.error('Request timeout - please try again');
+      console.log('Request timeout detected');
     } else if (error.response?.status === 0 || !error.response) {
-      toast.error('Cannot connect to server - please check your connection');
+      console.log('Connection error detected');
     } else if (error.response?.status >= 500) {
-      toast.error('Server error - please try again later');
-    } else if (error.response?.status === 401) {
-      // Don't show toast for 401 errors, handle them in components
-      console.log('Authentication required');
+      console.log('Server error detected');
     }
     
+    // Don't show automatic toasts - let components handle their own errors
     return Promise.reject(error);
   }
 );
@@ -155,6 +154,7 @@ function App() {
     }
   };
 
+  // FIXED: Login handler with proper error handling
   const handleLogin = async (loginData) => {
     try {
       console.log('🔄 Attempting login...');
@@ -166,17 +166,35 @@ function App() {
         setUser(response.data.user);
         toast.success(`Welcome back, ${response.data.user.full_name}!`);
         console.log('✅ Login successful');
+        return { success: true };
       } else {
         throw new Error('Invalid response format');
       }
     } catch (error) {
       console.error('❌ Login failed:', error);
-      const message = error.response?.data?.detail || 'Login failed';
-      toast.error(message);
-      throw error;
+      
+      // Handle specific error cases
+      let errorMessage = 'Login failed';
+      
+      if (error.response?.status === 401) {
+        errorMessage = error.response?.data?.detail || 'Incorrect username or password';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.detail || 'Invalid login data';
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Login request timed out - please try again';
+      } else if (!error.response) {
+        errorMessage = 'Cannot connect to server - please check your connection';
+      } else {
+        errorMessage = error.response?.data?.detail || 'Login failed - please try again';
+      }
+      
+      // Show error immediately
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     }
   };
 
+  // FIXED: Register handler with proper error handling
   const handleRegister = async (registerData) => {
     try {
       console.log('🔄 Attempting registration...');
@@ -185,13 +203,27 @@ function App() {
       if (response.data?.message) {
         toast.success('Registration successful! Please log in.');
         console.log('✅ Registration successful');
-        return true;
+        return { success: true };
       }
     } catch (error) {
       console.error('❌ Registration failed:', error);
-      const message = error.response?.data?.detail || 'Registration failed';
-      toast.error(message);
-      throw error;
+      
+      // Handle specific error cases
+      let errorMessage = 'Registration failed';
+      
+      if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.detail || 'User already exists or invalid data';
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Registration request timed out - please try again';
+      } else if (!error.response) {
+        errorMessage = 'Cannot connect to server - please check your connection';
+      } else {
+        errorMessage = error.response?.data?.detail || 'Registration failed - please try again';
+      }
+      
+      // Show error immediately
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -329,7 +361,18 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <ToastContainer position="top-right" autoClose={5000} />
+      <ToastContainer 
+        position="top-right" 
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
@@ -438,7 +481,7 @@ function App() {
   );
 }
 
-// Login Page Component
+// FIXED: Login Page Component with proper error handling
 const LoginPage = ({ onLogin, onRegister, connectionStatus }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -450,28 +493,54 @@ const LoginPage = ({ onLogin, onRegister, connectionStatus }) => {
     mfa_token: ''
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(''); // Clear previous errors
     
     try {
       if (isLogin) {
-        await onLogin({
+        const result = await onLogin({
           username: formData.username,
           password: formData.password,
           mfa_token: formData.mfa_token || undefined
         });
+        
+        if (!result.success) {
+          setError(result.error);
+        }
       } else {
-        await onRegister(formData);
-        setIsLogin(true);
-        setFormData({ ...formData, password: '', mfa_token: '' });
+        const result = await onRegister(formData);
+        
+        if (result.success) {
+          setIsLogin(true);
+          setFormData({ ...formData, password: '', mfa_token: '' });
+          setError('');
+        } else {
+          setError(result.error);
+        }
       }
     } catch (error) {
-      // Error handling is done in parent component
+      console.error('Form submission error:', error);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchMode = () => {
+    setIsLogin(!isLogin);
+    setError(''); // Clear errors when switching modes
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      role: 'individual',
+      full_name: '',
+      mfa_token: ''
+    });
   };
 
   return (
@@ -499,6 +568,18 @@ const LoginPage = ({ onLogin, onRegister, connectionStatus }) => {
               </span>
             </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-red-700 text-sm font-medium">{error}</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -609,7 +690,7 @@ const LoginPage = ({ onLogin, onRegister, connectionStatus }) => {
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={switchMode}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
