@@ -34,9 +34,9 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 # CORS Configuration - CRITICAL FIX for deployment
 CORS_ORIGINS = ["*"]  # Allow all origins for deployment
 
-# Timeout Configuration - Increased for deployment
-REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '60'))  # seconds - increased for Render.com
-DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '20'))  # seconds - increased for cold starts
+# Timeout Configuration - ENHANCED for deployment stability
+REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '45'))  # seconds - increased for deployment
+DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '15'))  # seconds - optimized for cold starts
 
 # Server Configuration
 HOST = os.environ.get('HOST', '0.0.0.0')
@@ -48,3 +48,7 @@ IS_PRODUCTION = DEPLOYMENT_ENV.lower() == 'production'
 
 # Cold start handling for serverless deployments
 COLD_START_TIMEOUT = int(os.environ.get('COLD_START_TIMEOUT', '90'))  # seconds
+
+# Connection retry configuration
+MAX_RETRIES = int(os.environ.get('MAX_RETRIES', '3'))
+RETRY_DELAY = int(os.environ.get('RETRY_DELAY', '1'))  # seconds

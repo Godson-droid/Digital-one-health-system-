@@ -28,7 +28,7 @@ app = FastAPI(
     redoc_url="/redoc" if DEBUG else None
 )
 
-# Enhanced CORS middleware - CRITICAL FIX
+# CRITICAL FIX: Enhanced CORS middleware for deployment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for deployment
@@ -45,13 +45,15 @@ app.add_middleware(
         "X-Process-Time",
         "Origin",
         "Access-Control-Request-Method",
-        "Access-Control-Request-Headers"
+        "Access-Control-Request-Headers",
+        "Cache-Control",
+        "Pragma"
     ],
     expose_headers=["X-Process-Time"],
     max_age=3600,
 )
 
-# Request timeout middleware
+# Request timeout middleware with better error handling
 @app.middleware("http")
 async def timeout_middleware(request: Request, call_next):
     try:
@@ -65,6 +67,11 @@ async def timeout_middleware(request: Request, call_next):
         
         process_time = time.time() - start_time
         response.headers["X-Process-Time"] = str(process_time)
+        
+        # Add CORS headers to all responses
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
         
         return response
     except asyncio.TimeoutError:
@@ -111,7 +118,12 @@ async def health_check():
                 "database": db_status,
                 "version": "2.0.0",
                 "cors": "enabled",
-                "backend_url": "https://digital-one-health-system.onrender.com"
+                "backend_url": "https://digital-one-health-system.onrender.com",
+                "api_endpoints": {
+                    "auth": "/api/auth",
+                    "health_records": "/api/health-records",
+                    "blockchain": "/api/blockchain"
+                }
             },
             headers={
                 "Access-Control-Allow-Origin": "*",
@@ -136,22 +148,42 @@ async def health_check():
             }
         )
 
-# Root endpoint
+# Root endpoint with API information
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Root endpoint with API information"""
     return JSONResponse(
         content={
             "message": "Digital One Health System API",
             "version": "2.0.0",
             "status": "running",
             "docs": "/docs",
-            "health": "/health"
+            "health": "/health",
+            "api_base": "/api",
+            "endpoints": {
+                "authentication": "/api/auth",
+                "health_records": "/api/health-records", 
+                "blockchain": "/api/blockchain"
+            }
         },
         headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "*"
+        }
+    )
+
+# OPTIONS handler for preflight requests
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Handle OPTIONS requests for CORS preflight"""
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "3600"
         }
     )
 
