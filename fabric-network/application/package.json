@@ -1,0 +1,28 @@
+{
+    "name": "digital-one-health-fabric-app",
+    "version": "1.0.0",
+    "description": "Digital One Health System - Hyperledger Fabric Application",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "nodemon app.js",
+        "test": "mocha test --recursive"
+    },
+    "dependencies": {
+        "fabric-network": "^2.2.19",
+        "fabric-ca-client": "^2.2.19",
+        "express": "^4.18.2",
+        "cors": "^2.8.5",
+        "helmet": "^7.0.0",
+        "morgan": "^1.10.0",
+        "dotenv": "^16.3.1",
+        "uuid": "^9.0.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1",
+        "mocha": "^10.2.0",
+        "chai": "^4.3.8"
+    },
+    "author": "Digital One Health Team",
+    "license": "Apache-2.0"
+}
