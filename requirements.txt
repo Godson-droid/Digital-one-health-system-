@@ -29,20 +29,13 @@ pillow>=10.0.0
 bcrypt>=4.1.0
 gunicorn==23.0.0
 
-# Hyperledger Fabric Integration Dependencies
-fabric-sdk-py
-grpcio>=1.60.0
-grpcio-tools>=1.60.0
-protobuf>=4.25.0
-
-# Additional Security and Blockchain Dependencies
-ecdsa>=0.18.0
-secp256k1>=0.14.0
-coincurve>=18.0.0
-
-# Enhanced Logging and Monitoring
+# Enhanced Logging and Monitoring (Render-compatible)
 structlog>=23.2.0
 prometheus-client>=0.19.0
 
 # Development and Testing
 docker>=7.0.0
+
+# Note: Hyperledger Fabric dependencies removed for Render deployment
+# These require native compilation and are not compatible with Render's environment
+# Fabric integration will be handled through REST API calls to external Fabric Gateway
