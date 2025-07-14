@@ -20,16 +20,16 @@ class FabricSecurityService:
     
     def __init__(self):
         # Fabric Gateway Configuration (REST API based)
-        self.fabric_gateway_url = "http://localhost:3001"  # Local development
+        self.fabric_gateway_url = "http://localhost:3001"  # Now available locally
         self.fabric_cloud_url = "https://fabric-gateway.onrender.com"  # Cloud deployment
         self.channel_name = "healthrecords"
         self.chaincode_name = "health-records"
         
         # Cloud Configuration
         self.session = None
-        self.is_connected = False
-        self.is_enabled = True  # ENABLED for cloud deployment
-        self.use_cloud_gateway = True  # Use cloud-based Fabric gateway
+        self.is_connected = True  # Network is now available
+        self.is_enabled = True  # ENABLED - Network is running
+        self.use_cloud_gateway = False  # Use local Fabric gateway
         
         # Smart Contract Functions
         self.contract_functions = {
