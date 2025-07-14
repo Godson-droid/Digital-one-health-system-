@@ -37,7 +37,6 @@ tzdata>=2024.2
 
 # Hyperledger Fabric Dependencies - ENABLED FOR RENDER
 fabric-sdk-py>=1.0.0
-hfc>=1.0.0
 
 # gRPC and Protocol Buffers
 grpcio>=1.60.0
