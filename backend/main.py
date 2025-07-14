@@ -10,7 +10,7 @@ from .routes import auth_routes, health_record_routes, blockchain_routes
 from .database import close_database, get_database
 from .config import DEBUG, CORS_ORIGINS, REQUEST_TIMEOUT, HOST, PORT
 from .services.user_service import UserService
-from .services.fabric_integration_service import fabric_security_service
+from .services.fabric_integration_service import get_fabric_security_service
 
 # Configure logging
 logging.basicConfig(
@@ -305,7 +305,8 @@ async def startup_event():
     # Initialize Fabric Security Service (ENABLED for Render)
     try:
         logger.info("🔐 Initializing Hyperledger Fabric Security...")
-        await fabric_security_service.initialize()
+        fabric_service = await get_fabric_security_service()
+        await fabric_service.initialize()
         logger.info("✅ Enterprise blockchain security enabled")
     except Exception as e:
         logger.warning(f"⚠️ Fabric security initialization warning: {e}")
@@ -315,7 +316,8 @@ async def shutdown_event():
     """Cleanup on shutdown"""
     try:
         await close_database()
-        await fabric_security_service.close()
+        fabric_service = await get_fabric_security_service()
+        await fabric_service.close()
         logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")

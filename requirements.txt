@@ -35,19 +35,6 @@ qrcode[pil]>=7.4.2
 typer>=0.9.0
 tzdata>=2024.2
 
-# Hyperledger Fabric Dependencies - ENABLED FOR RENDER
-fabric-sdk-py>=1.0.0
-
-# gRPC and Protocol Buffers
-grpcio>=1.60.0
-grpcio-tools>=1.60.0
-protobuf>=4.25.0
-
-# Cryptographic Libraries for Fabric
-ecdsa>=0.18.0
-secp256k1>=0.14.0
-coincurve>=18.0.0
-
 # HTTP Client for Fabric Integration
 aiohttp>=3.9.0
 
@@ -55,9 +42,8 @@ aiohttp>=3.9.0
 structlog>=23.2.0
 prometheus-client>=0.19.0
 
-# Development Tools
+# Development Tools (optional for production)
 pytest>=8.0.0
-docker>=7.0.0
 
 # Enhanced Security Libraries
 pycryptodome>=3.19.0
