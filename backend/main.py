@@ -10,7 +10,7 @@ from .routes import auth_routes, health_record_routes, blockchain_routes
 from .database import close_database, get_database
 from .config import DEBUG, CORS_ORIGINS, REQUEST_TIMEOUT, HOST, PORT
 from .services.user_service import UserService
-from .services.fabric_integration_service import fabric_service
+from .services.fabric_integration_service import fabric_security_service
 
 # Configure logging
 logging.basicConfig(
@@ -271,7 +271,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     """Initialize application on startup"""
     try:
-        logger.info("Digital One Health System v2.0 starting up...")
+        logger.info("🚀 Digital One Health System v2.0 with Enterprise Security starting up...")
         logger.info(f"CORS Origins: {CORS_ORIGINS}")
         logger.info(f"Request Timeout: {REQUEST_TIMEOUT}s")
         
@@ -302,18 +302,20 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Startup error: {e}")
     
-    # Initialize Fabric service (disabled by default for Render)
+    # Initialize Fabric Security Service (ENABLED for Render)
     try:
-        await fabric_service.initialize()
+        logger.info("🔐 Initializing Hyperledger Fabric Security...")
+        await fabric_security_service.initialize()
+        logger.info("✅ Enterprise blockchain security enabled")
     except Exception as e:
-        logger.warning(f"Fabric service initialization skipped: {e}")
+        logger.warning(f"⚠️ Fabric security initialization warning: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
     try:
         await close_database()
-        await fabric_service.close()
+        await fabric_security_service.close()
         logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")

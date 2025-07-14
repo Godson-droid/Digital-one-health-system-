@@ -224,6 +224,29 @@ class HealthRecordService:
             print(f"Error updating blockchain info: {e}")
             return False
 
+    async def update_fabric_info(self, record_id: str, fabric_record_id: str, fabric_hash: str, transaction_id: str) -> bool:
+        """Update Fabric blockchain information for a record"""
+        try:
+            if not record_id:
+                return False
+                
+            db = await self.get_db()
+            result = await db.health_records.update_one(
+                {"id": record_id},
+                {
+                    "$set": {
+                        "fabric_record_id": fabric_record_id,
+                        "fabric_hash": fabric_hash,
+                        "fabric_transaction_id": transaction_id,
+                        "fabric_verified": True,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error updating Fabric info: {e}")
+            return False
     async def delete_record(self, record_id: str) -> bool:
         """Soft delete a health record"""
         try:

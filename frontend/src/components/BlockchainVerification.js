@@ -160,6 +160,16 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                         : 'Integrity verification failed - potential tampering detected'
                       }
                     </p>
+                    {verificationResult.fabric_verification && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-xs text-blue-700 font-medium">
+                          🔐 Enterprise Security: {verificationResult.fabric_verification.security_level || 'Standard'}
+                        </p>
+                        <p className="text-xs text-blue-600">
+                          Hyperledger Fabric: {verificationResult.fabric_verification.verified ? '✅ Verified' : '❌ Failed'}
+                        </p>
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500 mt-1">
                       Verified: {verificationResult.verified_at ? new Date(verificationResult.verified_at).toLocaleString() : 'Unknown'}
                     </p>

@@ -1,41 +1,65 @@
 fastapi==0.110.1
-uvicorn==0.25.0
+uvicorn[standard]==0.25.0
+gunicorn==23.0.0
+
+# Core Dependencies
 boto3>=1.34.129
-requests-oauthlib
+requests-oauthlib>=2.0.0
 cryptography>=42.0.8
 python-dotenv>=1.0.1
 pymongo==4.5.0
+motor==3.3.1
+
+# Pydantic and Validation
 pydantic>=2.6.4
 email-validator>=2.2.0
+
+# Authentication and Security
 pyjwt>=2.10.1
-passlib>=1.7.4
-tzdata>=2024.2
-motor==3.3.1
-pytest>=8.0.0
-black>=24.1.1
-isort>=5.13.2
-flake8>=7.0.0
-mypy>=1.8.0
-python-jose>=3.3.0
-requests>=2.31.0
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+pyotp>=2.9.0
+bcrypt>=4.1.0
+
+# Data Processing
 pandas>=2.2.0
 numpy>=1.26.0
-python-multipart>=0.0.9
-jq>=1.6.0
-typer>=0.9.0
-pyotp>=2.9.0
-qrcode[pil]>=7.4.2
-pillow>=10.0.0
-bcrypt>=4.1.0
-gunicorn==23.0.0
+requests>=2.31.0
 
-# Enhanced Logging and Monitoring (Render-compatible)
+# File Handling
+python-multipart>=0.0.9
+pillow>=10.0.0
+qrcode[pil]>=7.4.2
+
+# Utilities
+typer>=0.9.0
+tzdata>=2024.2
+
+# Hyperledger Fabric Dependencies - ENABLED FOR RENDER
+fabric-sdk-py>=1.0.0
+hfc>=1.0.0
+
+# gRPC and Protocol Buffers
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+protobuf>=4.25.0
+
+# Cryptographic Libraries for Fabric
+ecdsa>=0.18.0
+secp256k1>=0.14.0
+coincurve>=18.0.0
+
+# HTTP Client for Fabric Integration
+aiohttp>=3.9.0
+
+# Monitoring and Logging
 structlog>=23.2.0
 prometheus-client>=0.19.0
 
-# Development and Testing
+# Development Tools
+pytest>=8.0.0
 docker>=7.0.0
 
-# Note: Hyperledger Fabric dependencies removed for Render deployment
-# These require native compilation and are not compatible with Render's environment
-# Fabric integration will be handled through REST API calls to external Fabric Gateway
+# Enhanced Security Libraries
+pycryptodome>=3.19.0
+cryptography-vectors>=42.0.8
