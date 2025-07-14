@@ -10,6 +10,7 @@ from .routes import auth_routes, health_record_routes, blockchain_routes
 from .database import close_database, get_database
 from .config import DEBUG, CORS_ORIGINS, REQUEST_TIMEOUT, HOST, PORT
 from .services.user_service import UserService
+from .services.fabric_integration_service import fabric_service
 
 # Configure logging
 logging.basicConfig(
@@ -300,12 +301,19 @@ async def startup_event():
         logger.info("Application startup complete")
     except Exception as e:
         logger.error(f"Startup error: {e}")
+    
+    # Initialize Fabric service (disabled by default for Render)
+    try:
+        await fabric_service.initialize()
+    except Exception as e:
+        logger.warning(f"Fabric service initialization skipped: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
     try:
         await close_database()
+        await fabric_service.close()
         logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")

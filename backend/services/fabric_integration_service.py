@@ -1,6 +1,6 @@
 """
 Hyperledger Fabric Integration Service
-Connects the FastAPI backend with the Hyperledger Fabric network
+Connects the FastAPI backend with external Hyperledger Fabric network via REST API
 """
 
 import asyncio
@@ -15,21 +15,29 @@ from ..config import DEBUG
 logger = logging.getLogger(__name__)
 
 class FabricIntegrationService:
-    """Service to integrate with Hyperledger Fabric network"""
+    """Service to integrate with external Hyperledger Fabric network via REST API"""
     
     def __init__(self):
-        self.fabric_gateway_url = "http://localhost:3001"
+        # For Render deployment, Fabric Gateway would be deployed separately
+        # This could be on a different service or external infrastructure
+        self.fabric_gateway_url = "http://localhost:3001"  # External Fabric Gateway
         self.session = None
         self.is_connected = False
+        self.is_enabled = False  # Disabled by default for Render deployment
     
     async def initialize(self):
         """Initialize the Fabric integration service"""
         try:
+            # Only initialize if Fabric integration is enabled
+            if not self.is_enabled:
+                logger.info("Fabric integration disabled for cloud deployment")
+                return
+                
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=30)
             )
             
-            # Test connection to Fabric Gateway
+            # Test connection to external Fabric Gateway
             await self.test_connection()
             logger.info("Fabric Integration Service initialized successfully")
         except Exception as e:
@@ -37,23 +45,28 @@ class FabricIntegrationService:
             self.is_connected = False
     
     async def test_connection(self):
-        """Test connection to Fabric Gateway"""
+        """Test connection to external Fabric Gateway"""
+        if not self.is_enabled:
+            return False
+            
         try:
             async with self.session.get(f"{self.fabric_gateway_url}/health") as response:
                 if response.status == 200:
                     self.is_connected = True
-                    logger.info("Connected to Hyperledger Fabric Gateway")
+                    logger.info("Connected to external Hyperledger Fabric Gateway")
                 else:
                     self.is_connected = False
                     logger.warning(f"Fabric Gateway health check failed: {response.status}")
         except Exception as e:
             self.is_connected = False
             logger.error(f"Failed to connect to Fabric Gateway: {e}")
+        
+        return self.is_connected
     
     async def create_health_record_on_fabric(self, record_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Create a health record on the Fabric network"""
-        if not self.is_connected:
-            logger.warning("Fabric network not connected, skipping blockchain storage")
+        """Create a health record on the external Fabric network"""
+        if not self.is_enabled or not self.is_connected:
+            logger.info("Fabric network not available, skipping blockchain storage")
             return None
         
         try:
@@ -83,8 +96,8 @@ class FabricIntegrationService:
             return None
     
     async def verify_record_integrity_on_fabric(self, record_id: str) -> Optional[Dict[str, Any]]:
-        """Verify record integrity on the Fabric network"""
-        if not self.is_connected:
+        """Verify record integrity on the external Fabric network"""
+        if not self.is_enabled or not self.is_connected:
             return None
         
         try:
@@ -101,63 +114,22 @@ class FabricIntegrationService:
             logger.error(f"Error verifying record on Fabric: {e}")
             return None
     
-    async def get_record_history_from_fabric(self, record_id: str) -> List[Dict[str, Any]]:
-        """Get record history from the Fabric network"""
-        if not self.is_connected:
-            return []
+    async def enable_fabric_integration(self, gateway_url: str = None):
+        """Enable Fabric integration with optional gateway URL"""
+        if gateway_url:
+            self.fabric_gateway_url = gateway_url
         
-        try:
-            async with self.session.get(
-                f"{self.fabric_gateway_url}/api/health-records/{record_id}/history"
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return result.get('data', [])
-                else:
-                    logger.error(f"Failed to get record history from Fabric: {response.status}")
-                    return []
-        except Exception as e:
-            logger.error(f"Error getting record history from Fabric: {e}")
-            return []
+        self.is_enabled = True
+        await self.initialize()
+        logger.info(f"Fabric integration enabled with gateway: {self.fabric_gateway_url}")
     
-    async def update_record_privacy_on_fabric(self, record_id: str, is_public: bool, updated_by: str) -> bool:
-        """Update record privacy on the Fabric network"""
-        if not self.is_connected:
-            return False
-        
-        try:
-            async with self.session.put(
-                f"{self.fabric_gateway_url}/api/health-records/{record_id}/privacy",
-                json={"isPublic": is_public, "updatedBy": updated_by}
-            ) as response:
-                if response.status == 200:
-                    logger.info(f"Record privacy updated on Fabric: {record_id}")
-                    return True
-                else:
-                    logger.error(f"Failed to update record privacy on Fabric: {response.status}")
-                    return False
-        except Exception as e:
-            logger.error(f"Error updating record privacy on Fabric: {e}")
-            return False
-    
-    async def query_public_records_from_fabric(self) -> List[Dict[str, Any]]:
-        """Query public records from the Fabric network"""
-        if not self.is_connected:
-            return []
-        
-        try:
-            async with self.session.get(
-                f"{self.fabric_gateway_url}/api/health-records/public"
-            ) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return result.get('data', [])
-                else:
-                    logger.error(f"Failed to query public records from Fabric: {response.status}")
-                    return []
-        except Exception as e:
-            logger.error(f"Error querying public records from Fabric: {e}")
-            return []
+    async def disable_fabric_integration(self):
+        """Disable Fabric integration"""
+        self.is_enabled = False
+        self.is_connected = False
+        if self.session:
+            await self.session.close()
+        logger.info("Fabric integration disabled")
     
     async def close(self):
         """Close the Fabric integration service"""
@@ -170,6 +142,6 @@ fabric_service = FabricIntegrationService()
 
 async def get_fabric_service() -> FabricIntegrationService:
     """Get the global Fabric service instance"""
-    if not fabric_service.session:
+    if not fabric_service.session and fabric_service.is_enabled:
         await fabric_service.initialize()
     return fabric_service
