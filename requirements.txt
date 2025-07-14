@@ -30,11 +30,10 @@ bcrypt>=4.1.0
 gunicorn==23.0.0
 
 # Hyperledger Fabric Integration Dependencies
-fabric-sdk-py>=1.0.0
+fabric-sdk-py
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
 protobuf>=4.25.0
-fabric-sdk-py
 
 # Additional Security and Blockchain Dependencies
 ecdsa>=0.18.0
