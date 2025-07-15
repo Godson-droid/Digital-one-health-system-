@@ -36,6 +36,9 @@ click>=8.1.0
 typer>=0.9.0
 rich>=13.7.0
 
+# Web Server
+gunicorn
+
 # Data Processing (Revert to modern versions)
 pandas>=2.2.0
 numpy>=1.26.0
