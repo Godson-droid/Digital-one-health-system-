@@ -39,7 +39,7 @@ rich>=13.7.0
 # Data Processing (Adjusted for Python 3.9.x compatibility)
 pandas==1.5.3 # Good for Python 3.9
 numpy==1.24.4 # Good for Python 3.9
-pysha3==1.0.5 # Keep for now, but watch if build fails here
+pysha3==1.0.0 # Keep for now, but watch if build fails here
 
 # Security
 passlib>=1.7.4
