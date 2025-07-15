@@ -10,7 +10,7 @@ grpcio-tools==1.51.3 # Match grpcio version
 protobuf==3.20.3 # Crucial for grpcio compatibility with Python 3.9
 
 # Cryptographic Libraries (Adjusted for Python 3.9.x compatibility)
-cryptography==3.9.0 # Good for Python 3.9
+cryptography==3.4.8 # Good for Python 3.9
 ecdsa>=0.18.0 # Likely fine
 secp256k1==0.14.0 # Pin exact if issues persist, check its docs for 3.9
 coincurve==18.0.0 # Pin exact if issues persist, check its docs for 3.9
