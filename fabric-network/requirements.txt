@@ -3,7 +3,6 @@
 
 # Core Fabric SDK
 fabric-sdk-py>=1.0.0
-hfc>=1.0.0
 
 # gRPC and Protocol Buffers
 grpcio>=1.60.0
