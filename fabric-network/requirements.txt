@@ -5,8 +5,8 @@
 fabric-sdk-py>=1.0.0 # Keep this for now, issue likely with its dependencies
 
 # gRPC and Protocol Buffers (Adjusted for Python 3.9.x compatibility)
-grpcio==1.51.3 # Confirmed good for Python 3.9 by many sources
-grpcio-tools==1.51.3 # Match grpcio version
+grpcio==1.49.1 # Confirmed good for Python 3.9 by many sources
+grpcio-tools==1.49.1 # Match grpcio version
 protobuf==3.20.3 # Crucial for grpcio compatibility with Python 3.9
 
 # Cryptographic Libraries (Adjusted for Python 3.9.x compatibility)
