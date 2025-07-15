@@ -10,7 +10,7 @@ grpcio-tools>=1.60.0
 protobuf>=4.25.0
 
 # Cryptographic Libraries
-cryptography>=42.0.8
+cryptography>=42.0.5
 ecdsa>=0.18.0
 secp256k1>=0.14.0
 coincurve>=18.0.0
