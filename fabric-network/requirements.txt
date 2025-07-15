@@ -2,7 +2,7 @@
 # These are for Python-based Fabric client applications
 
 # Core Fabric SDK
-fabric-sdk-py>=1.0.0 # Check its compatibility with Python 3.10/3.11 - likely fine
+fabric-sdk-py # Check its compatibility with Python 3.10/3.11 - likely fine
 
 # gRPC and Protocol Buffers (Now compatible with newer Python)
 grpcio>=1.60.0
@@ -39,7 +39,7 @@ rich>=13.7.0
 # Data Processing (Revert to modern versions)
 pandas>=2.2.0
 numpy>=1.26.0
-pysha3>=1.0.0 # You can try 1.0.6 again, or just 'pysha3' to get the latest compatible
+pysha3 # You can try 1.0.6 again, or just 'pysha3' to get the latest compatible
 
 # Security
 passlib>=1.7.4
