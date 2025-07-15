@@ -2,18 +2,18 @@
 # These are for Python-based Fabric client applications
 
 # Core Fabric SDK
-fabric-sdk-py>=1.0.0
+fabric-sdk-py>=1.0.0 # Keep this for now, issue likely with its dependencies
 
-# gRPC and Protocol Buffers
-grpcio>=1.60.0
-grpcio-tools>=1.60.0
-protobuf>=4.25.0
+# gRPC and Protocol Buffers (Adjusted for Python 3.9.x compatibility)
+grpcio==1.51.3 # Confirmed good for Python 3.9 by many sources
+grpcio-tools==1.51.3 # Match grpcio version
+protobuf==3.20.3 # Crucial for grpcio compatibility with Python 3.9
 
-# Cryptographic Libraries
-cryptography>=42.0.7
-ecdsa>=0.18.0
-secp256k1>=0.14.0
-coincurve>=18.0.0
+# Cryptographic Libraries (Adjusted for Python 3.9.x compatibility)
+cryptography==3.9.0 # Good for Python 3.9
+ecdsa>=0.18.0 # Likely fine
+secp256k1==0.14.0 # Pin exact if issues persist, check its docs for 3.9
+coincurve==18.0.0 # Pin exact if issues persist, check its docs for 3.9
 
 # Networking and HTTP
 requests>=2.20.0
@@ -36,10 +36,10 @@ click>=8.1.0
 typer>=0.9.0
 rich>=13.7.0
 
-# Data Processing
-pandas>=2.2.0
-numpy>=1.26.0
-pysha3==1.0.6
+# Data Processing (Adjusted for Python 3.9.x compatibility)
+pandas==1.5.3 # Good for Python 3.9
+numpy==1.24.4 # Good for Python 3.9
+pysha3==1.0.6 # Keep for now, but watch if build fails here
 
 # Security
 passlib>=1.7.4
