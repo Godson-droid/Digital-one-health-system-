@@ -30,7 +30,6 @@ prometheus-client>=0.19.0
 # Development and Testing
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
-docker>=7.0.0
 
 # Utilities
 click>=8.1.0
