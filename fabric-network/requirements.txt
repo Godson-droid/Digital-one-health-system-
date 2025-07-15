@@ -38,6 +38,7 @@ rich>=13.7.0
 
 # Web Server
 gunicorn==20.1.0
+uvicorn>=0.17.0 # Pin to a stable version
 
 # Data Processing (Revert to modern versions)
 pandas>=2.2.0
