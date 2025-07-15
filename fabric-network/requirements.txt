@@ -39,6 +39,7 @@ rich>=13.7.0
 # Data Processing
 pandas>=2.2.0
 numpy>=1.26.0
+pysha3==1.0.6
 
 # Security
 passlib>=1.7.4
