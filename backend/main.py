@@ -304,12 +304,12 @@ async def startup_event():
     
     # Initialize Fabric Security Service (ENABLED for Render)
     try:
-        logger.info("🔐 Initializing Hyperledger Fabric Security...")
+        logger.info("🔐 Initializing Cloud-Optimized Fabric Security...")
         fabric_service = await get_fabric_security_service()
         await fabric_service.initialize()
-        logger.info("✅ Enterprise blockchain security enabled")
+        logger.info("✅ Cloud blockchain security enabled")
     except Exception as e:
-        logger.warning(f"⚠️ Fabric security initialization warning: {e}")
+        logger.info(f"ℹ️ Fabric security will be available when network is deployed: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
