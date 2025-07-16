@@ -1,58 +1,50 @@
-# Core Fabric SDK
+# Fabric Core
 fabric-sdk-py==1.0.0
+pysha3==1.0b1
+requests==2.20.0
+urllib3==1.24.3
 
 # gRPC & Protobuf
-grpcio>=1.60.0
-grpcio-tools>=1.60.0
-protobuf>=4.25.0
+grpcio==1.60.0
+grpcio-tools==1.60.0
+protobuf==3.20.3
 
-# Cryptography Ecosystem
-cryptography>=42.0.7
-cffi>=1.15.1
-pyOpenSSL>=22.1.0           # For TLS and SSL support
-asn1crypto>=1.5.1
-ecdsa>=0.18.0
-secp256k1>=0.14.0
-coincurve>=18.0.0
+# Crypto
+cryptography==42.0.7
+ecdsa==0.18.0
+coincurve==18.0.0
+secp256k1==0.14.0
+cffi==1.15.1
 
-# Networking & HTTP
-requests==2.20.0
-urllib3<1.25,>=1.21.1         # Used by requests
-aiohttp>=3.9.0
-yarl>=1.9.2                 # aiohttp dependency
-multidict>=6.0.4           # aiohttp dependency
-
-# Config & Env
-python-dotenv>=1.0.1
-pyyaml>=6.0.1
-
-# Logging & Monitoring
-structlog>=23.2.0
-prometheus-client>=0.19.0
-
-# Runtime Utilities
-click>=8.1.0
-typer>=0.9.0
-rich>=13.7.0
-
-# Web Server
-gunicorn==20.1.0
-uvicorn>=0.17.0
+# Web stack
 fastapi==0.111.0
+uvicorn==0.29.0
+gunicorn==20.1.0
 
-# Data Processing
-pandas>=2.2.0
-numpy>=1.26.0
-pysha3==1.0b1
+# Async
+aiohttp==3.9.0
+yarl==1.9.2
+multidict==6.0.4
 
+# Data
+pandas==2.2.2
+numpy==1.26.4
+pytz==2022.7.1
 
-# Security
-passlib>=1.7.4
-bcrypt>=4.1.0
+# Config
+python-dotenv==1.0.1
+pyyaml==6.0.1
+
+# Utils
+click==8.1.3
+typer==0.9.0
+rich==13.7.0
+shellingham==1.5.3
 
 # Testing
-pytest>=8.0.0
-pytest-asyncio>=0.23.0
+pytest==8.0.0
+pytest-asyncio==0.23.0
 
-# Build tools
-cffi>=1.15.1     # already listed for cryptography
+# Security
+passlib==1.7.4
+bcrypt==4.1.0
