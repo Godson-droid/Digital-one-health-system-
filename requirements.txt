@@ -41,7 +41,7 @@ click==8.1.7
 # Data Processing - Pinned
 pandas==2.2.0
 numpy==1.26.0
-requests==2.31.0
+requests==2.20.0
 
 # File Handling - Pinned
 python-multipart==0.0.9
