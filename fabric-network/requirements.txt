@@ -40,9 +40,10 @@ cryptography==42.0.8
 cryptography-vectors==42.0.8
 
 # === Fabric System Dependencies ===
-docker==7.0.0
+docker==5.0.3
 pyyaml==6.0.1
 click==8.1.7
+urllib3==1.26.16
 
 # === Data Processing ===
 pandas==2.2.0
