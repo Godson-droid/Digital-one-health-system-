@@ -36,7 +36,6 @@ cryptography-vectors==42.0.8
 
 # Fabric Network Dependencies - Pinned
 docker==7.0.0
-fabric-test==1.0.0
 pyyaml==6.0.1
 click==8.1.7
 
