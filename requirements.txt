@@ -21,6 +21,26 @@ python-jose[cryptography]==3.3.0
 pyotp==2.9.0
 bcrypt==4.1.0
 
+# HYPERLEDGER FABRIC DEPENDENCIES - PINNED FOR RENDER
+fabric-sdk-py==1.0.0
+hfc==1.0.0
+grpcio==1.60.1
+grpcio-tools==1.60.1
+protobuf==4.25.1
+
+# Fabric Cryptographic Libraries - Pinned
+ecdsa==0.18.0
+secp256k1==0.14.0
+coincurve==18.0.0
+pycryptodome==3.19.0
+cryptography-vectors==42.0.8
+
+# Fabric Network Dependencies - Pinned
+docker==7.0.0
+fabric-test==1.0.0
+pyyaml==6.0.1
+click==8.1.7
+
 # Data Processing - Pinned
 pandas==2.2.0
 numpy==1.26.0
@@ -41,13 +61,6 @@ aiohttp==3.9.0
 # Monitoring and Logging - Pinned
 structlog==23.2.0
 prometheus-client==0.19.0
-
-# Enhanced Security Libraries - Pinned
-pycryptodome==3.19.0
-cryptography-vectors==42.0.8
-
-# Time zone handling - Specific version to avoid timeout
-pytz==2024.1
 
 # Core Python packages - Pinned to avoid resolution conflicts
 setuptools==69.5.1
@@ -119,3 +132,80 @@ annotated-types==0.7.0
 
 # Pydantic core
 pydantic-core==2.16.3
+
+# Docker SDK dependencies
+docker-pycreds==0.4.0
+websocket-client==1.7.0
+
+# gRPC dependencies
+googleapis-common-protos==1.62.0
+grpcio-status==1.60.1
+
+# Protocol Buffers dependencies
+protobuf==4.25.1
+
+# Fabric SDK sub-dependencies
+fabric-ca-client==1.0.0
+fabric-common==1.0.0
+fabric-protos==1.0.0
+
+# Cryptographic sub-dependencies
+pysha3==1.0.2
+ed25519==1.5
+pynacl==1.5.0
+
+# Network and TLS dependencies
+pyopenssl==24.0.0
+service-identity==23.1.0
+twisted==23.10.0
+
+# Additional Fabric dependencies
+hyperledger-fabric-protos==2.4.1
+fabric-chaincode-node==2.4.1
+
+# Consensus and ordering dependencies
+kafka-python==2.0.2
+zookeeper==0.4.0
+
+# Monitoring dependencies for Fabric
+py-solc-x==1.12.0
+web3==6.15.1
+
+# Additional security dependencies
+keyring==24.3.0
+keyrings-alt==5.0.0
+
+# Fabric Gateway dependencies
+fabric-gateway==1.0.0
+fabric-network==2.2.19
+
+# Additional async dependencies
+asyncio-mqtt==0.16.1
+aiofiles==23.2.1
+
+# Additional HTTP dependencies
+httptools==0.6.1
+uvloop==0.19.0
+
+# Additional cryptographic dependencies
+cryptography-rust==0.1.0
+rust-crypto==0.1.0
+
+# Additional data processing dependencies
+scipy==1.12.0
+matplotlib==3.8.2
+
+# Additional utility dependencies
+rich==13.7.0
+colorama==0.4.6
+
+# Additional testing dependencies (for Fabric testing)
+pytest==8.0.0
+pytest-asyncio==0.23.0
+pytest-mock==3.12.0
+
+# Additional development dependencies
+black==24.1.1
+isort==5.13.2
+flake8==7.0.0
+mypy==1.8.0
