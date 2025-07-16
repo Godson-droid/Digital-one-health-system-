@@ -152,8 +152,7 @@ pyopenssl==24.0.0
 service-identity==23.1.0
 twisted==23.10.0
 
-# Additional Fabric dependencies
-hyperledger-fabric-protos==2.4.1
+
 fabric-chaincode-node==2.4.1
 
 # Consensus and ordering dependencies
