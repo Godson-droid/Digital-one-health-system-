@@ -315,9 +315,19 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown"""
     try:
-        await close_database()
-        fabric_service = await get_fabric_security_service()
-        await fabric_service.close()
+        # Close Fabric service first
+        try:
+            fabric_service = await get_fabric_security_service()
+            await fabric_service.close()
+        except Exception as e:
+            logger.error(f"Error closing Fabric service: {e}")
+        
+        # Close database connection
+        try:
+            await close_database()
+        except Exception as e:
+            logger.error(f"Error closing database: {e}")
+            
         logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")

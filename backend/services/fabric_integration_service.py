@@ -518,10 +518,23 @@ class FabricSecurityService:
     
     async def close(self):
         """Close Fabric security service"""
-        if self.session:
-            await self.session.close()
+        try:
+            if self.session and not self.session.closed:
+                await self.session.close()
+                # Give a small delay to ensure proper cleanup
+                import asyncio
+                await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.warning(f"Error closing aiohttp session: {e}")
+        finally:
+            self.session = None
+            
         if self.gateway:
-            await self.gateway.disconnect()
+            try:
+                await self.gateway.disconnect()
+            except Exception as e:
+                logger.warning(f"Error disconnecting gateway: {e}")
+                
         logger.info("🔐 Hyperledger Fabric Security Service closed")
 
 # Global instance - FULL ENTERPRISE SECURITY

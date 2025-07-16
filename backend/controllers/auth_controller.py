@@ -25,6 +25,19 @@ class AuthController:
     async def register_user(self, user_data: UserCreate) -> dict:
         """Register a new user with admin restriction"""
         try:
+            # Validate input data
+            if not user_data.username or not user_data.password or not user_data.email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username, password, and email are required"
+                )
+            
+            if len(user_data.password) < 6:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password must be at least 6 characters long"
+                )
+            
             # Check if user exists
             existing_user = await self.user_service.get_user_by_username_or_email(
                 user_data.username, user_data.email
@@ -53,7 +66,15 @@ class AuthController:
                     )
 
             # Create user
-            hashed_password = get_password_hash(user_data.password)
+            try:
+                hashed_password = get_password_hash(user_data.password)
+            except Exception as hash_error:
+                logger.error(f"Password hashing failed: {hash_error}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Password processing failed"
+                )
+                
             user = await self.user_service.create_user(user_data, hashed_password)
             
             # Log user creation to blockchain
@@ -79,8 +100,28 @@ class AuthController:
     async def login_user(self, login_data: UserLogin) -> Token:
         """Authenticate user and return token"""
         try:
+            # Validate input
+            if not login_data.username or not login_data.password:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username and password are required"
+                )
+            
             user = await self.user_service.get_user_by_username(login_data.username)
-            if not user or not verify_password(login_data.password, user.hashed_password):
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect username or password"
+                )
+            
+            # Verify password with enhanced error handling
+            try:
+                password_valid = verify_password(login_data.password, user.hashed_password)
+            except Exception as verify_error:
+                logger.error(f"Password verification error: {verify_error}")
+                password_valid = False
+            
+            if not password_valid:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Incorrect username or password"

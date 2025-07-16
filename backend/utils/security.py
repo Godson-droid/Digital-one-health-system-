@@ -5,6 +5,7 @@ import pyotp
 from datetime import datetime, timedelta
 from typing import Optional
 import os
+import bcrypt
 
 # Security configuration
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
@@ -12,8 +13,13 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - FIXED for deployment compatibility
+pwd_context = CryptContext(
+    schemes=["bcrypt"], 
+    deprecated="auto",
+    bcrypt__rounds=12,
+    bcrypt__ident="2b"
+)
 
 # Encryption
 try:
@@ -26,18 +32,55 @@ except Exception as e:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
     try:
+        if not plain_password or not hashed_password:
+            return False
+        
+        # Handle both string and bytes for compatibility
+        if isinstance(hashed_password, str):
+            hashed_password = hashed_password.encode('utf-8')
+        if isinstance(plain_password, str):
+            plain_password = plain_password.encode('utf-8')
+            
         return pwd_context.verify(plain_password, hashed_password)
     except Exception as e:
-        print(f"Error verifying password: {e}")
+        print(f"Password verification error: {e}")
+        # Fallback to direct bcrypt verification
+        try:
+            return bcrypt.checkpw(plain_password, hashed_password)
+        except Exception as fallback_error:
+            print(f"Fallback password verification failed: {fallback_error}")
+            return False
         return False
 
 def get_password_hash(password: str) -> str:
     """Hash a password"""
     try:
-        return pwd_context.hash(password)
+        if not password:
+            raise ValueError("Password cannot be empty")
+        
+        # Ensure password is string
+        if isinstance(password, bytes):
+            password = password.decode('utf-8')
+            
+        hashed = pwd_context.hash(password)
+        
+        # Ensure we return a string, not bytes
+        if isinstance(hashed, bytes):
+            hashed = hashed.decode('utf-8')
+            
+        return hashed
     except Exception as e:
-        print(f"Error hashing password: {e}")
-        raise
+        print(f"Password hashing error: {e}")
+        # Fallback to direct bcrypt hashing
+        try:
+            if isinstance(password, str):
+                password = password.encode('utf-8')
+            salt = bcrypt.gensalt(rounds=12)
+            hashed = bcrypt.hashpw(password, salt)
+            return hashed.decode('utf-8')
+        except Exception as fallback_error:
+            print(f"Fallback password hashing failed: {fallback_error}")
+            raise Exception(f"Password hashing failed: {str(e)}")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT access token"""
