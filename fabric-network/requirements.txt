@@ -16,8 +16,7 @@ secp256k1>=0.14.0
 coincurve>=18.0.0
 
 # Networking & HTTP
-requests>=2.20.0
-urllib3>=1.26.0             # Used by requests
+requests>=2.31.0           # Used by requests
 aiohttp>=3.9.0
 yarl>=1.9.2                 # aiohttp dependency
 multidict>=6.0.4           # aiohttp dependency
