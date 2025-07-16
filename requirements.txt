@@ -143,7 +143,6 @@ grpcio-status==1.60.1
 protobuf==4.25.1
 
 # Fabric SDK sub-dependencies
-fabric-common==1.0.0
 fabric-protos==1.0.0
 
 # Cryptographic sub-dependencies
