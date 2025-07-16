@@ -1,43 +1,185 @@
-# Core Fabric SDK
-fabric-sdk-py==1.0.0
-pysha3==1.0b1
-requests==2.20.0
-urllib3==1.24.3
+fastapi==0.110.1
+uvicorn[standard]==0.25.0
+gunicorn==23.0.0
 
-# gRPC and Protobuf
-grpcio==1.43.0
-grpcio-tools==1.43.0
-protobuf==3.20.3
+# Core Dependencies - Pinned versions for faster resolution
+boto3==1.34.129
+requests-oauthlib==2.0.0
+cryptography==42.0.8
+python-dotenv==1.0.1
+pymongo==4.5.0
+motor==3.3.1
 
-# Crypto
-cryptography==42.0.7
+# Pydantic and Validation - Pinned
+pydantic==2.6.4
+email-validator==2.2.0
+
+# Authentication and Security - Pinned
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+pyotp==2.9.0
+bcrypt==4.1.0
+
+# HYPERLEDGER FABRIC DEPENDENCIES - PINNED FOR RENDER
+fabric-sdk-py==0.8.1
+grpcio==1.60.1
+grpcio-tools==1.60.1
+
+# Fabric Cryptographic Libraries - Pinned
 ecdsa==0.18.0
 secp256k1==0.14.0
 coincurve==18.0.0
-cffi==1.15.1
+pycryptodome==3.19.0
+cryptography-vectors==42.0.8
 
-# Web App Stack
-fastapi==0.111.0
-uvicorn==0.29.0
-gunicorn==20.1.0
+# Fabric Network Dependencies - Pinned
+docker==7.0.0
+pyyaml==6.0.1
+click==8.1.7
+
+# Data Processing - Pinned
+pandas==2.2.0
+numpy==1.26.0
+requests==2.31.0
+
+# File Handling - Pinned
+python-multipart==0.0.9
+pillow==10.0.0
+qrcode[pil]==7.4.2
+
+# Utilities - Pinned
+typer==0.9.0
+tzdata==2024.2
+
+# HTTP Client - Pinned
 aiohttp==3.9.0
-python-dotenv==1.0.1
+
+# Monitoring and Logging - Pinned
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Core Python packages - Pinned to avoid resolution conflicts
+setuptools==69.5.1
+wheel==0.43.0
+pip==24.0
+
+# Additional core dependencies that might be missing
+six==1.16.0
+urllib3==2.2.1
+certifi==2024.2.2
+charset-normalizer==3.3.2
+idna==3.7
+
+# JSON handling
+orjson==3.10.3
+
+# Async support
+anyio==4.4.0
+sniffio==1.3.1
+
+# HTTP/HTTPS support
+httpcore==1.0.5
+httpx==0.27.0
+h11==0.14.0
+
+# Cryptography dependencies
+cffi==1.16.0
+pycparser==2.22
+
+# Date/time handling
+python-dateutil==2.9.0
+
+# Regex support
+regex==2024.5.15
+
+# Markdown support
+markdown==3.6
+
+# YAML support
 pyyaml==6.0.1
 
-# Utils
-click==8.1.3
-typer==0.9.0
-rich==13.7.0
+# Click for CLI
+click==8.1.7
 
-# Testing
+
+# Jinja2 for templating
+jinja2==3.1.4
+markupsafe==2.1.5
+
+# Multidict for aiohttp
+multidict==6.0.5
+yarl==1.9.4
+aiosignal==1.3.1
+frozenlist==1.4.1
+
+# Async timeout
+async-timeout==4.0.3
+
+# Attrs for data classes
+attrs==23.2.0
+
+# Typing extensions
+typing-extensions==4.11.0
+
+# Annotated types
+annotated-types==0.7.0
+
+# Pydantic core
+pydantic-core==2.16.3
+
+# Docker SDK dependencies
+docker-pycreds==0.4.0
+websocket-client==1.7.0
+
+# gRPC dependencies
+googleapis-common-protos==1.62.0
+grpcio-status==1.60.1
+
+# Protocol Buffers dependencies
+protobuf==4.25.1
+
+# Cryptographic sub-dependencies
+pysha3==1.0b1
+ed25519==1.5
+pynacl==1.5.0
+
+# Network and TLS dependencies
+pyopenssl==24.0.0
+service-identity==23.1.0
+twisted==23.10.0
+
+# Consensus and ordering dependencies
+kafka-python==2.0.2
+zookeeper==0.4.0
+
+# Additional security dependencies
+keyring==24.3.0
+keyrings-alt==5.0.0
+
+# Additional async dependencies
+asyncio-mqtt==0.16.1
+aiofiles==23.2.1
+
+# Additional HTTP dependencies
+httptools==0.6.1
+uvloop==0.19.0
+
+# Additional data processing dependencies
+scipy==1.12.0
+matplotlib==3.8.2
+
+# Additional utility dependencies
+rich==13.7.0
+colorama==0.4.6
+
+# Additional testing dependencies (for Fabric testing)
 pytest==8.0.0
 pytest-asyncio==0.23.0
+pytest-mock==3.12.0
 
-# Data
-pandas==2.2.2
-numpy==1.26.4
-pytz==2022.7.1
-
-# Security
-passlib==1.7.4
-bcrypt==4.1.0
+# Additional development dependencies
+black==24.1.1
+isort==5.13.2
+flake8==7.0.0
+mypy==1.8.0
