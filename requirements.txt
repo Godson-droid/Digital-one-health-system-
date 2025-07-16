@@ -142,9 +142,6 @@ grpcio-status==1.60.1
 # Protocol Buffers dependencies
 protobuf==4.25.1
 
-# Fabric SDK sub-dependencies
-fabric-protos==1.0.0
-
 # Cryptographic sub-dependencies
 pysha3==1.0.2
 ed25519==1.5
