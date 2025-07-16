@@ -11,6 +11,8 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import aiohttp
 
+from ..config import FABRIC_GATEWAY_URL
+
 # Hyperledger Fabric SDK imports
 try:
     from hfc.api import Client
@@ -31,8 +33,8 @@ class FabricSecurityService:
     
     def __init__(self):
         # Fabric Network Configuration
-        self.fabric_gateway_url = "http://localhost:3001"
-        self.fabric_cloud_url = "https://digital-one-health-fabric.onrender.com"
+        self.fabric_gateway_url = FABRIC_GATEWAY_URL
+        self.fabric_cloud_url = FABRIC_GATEWAY_URL
         self.channel_name = "healthrecords"
         self.chaincode_name = "health-records"
         
@@ -97,11 +99,12 @@ class FabricSecurityService:
             
             # Initialize HTTP session for REST API fallback
             self.session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=60),
+                timeout=aiohttp.ClientTimeout(total=45, connect=15),
                 headers={
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'User-Agent': 'DigitalOneHealth-Enterprise/1.0'
+                    'User-Agent': 'DigitalOneHealth-Enterprise/1.0',
+                    'Cache-Control': 'no-cache'
                 }
             )
             
@@ -215,23 +218,23 @@ class FabricSecurityService:
     async def initialize_rest_api(self):
         """Initialize REST API connection to Fabric Gateway"""
         try:
-            logger.info("🌐 Initializing Fabric REST API connection...")
+            logger.info(f"🌐 Initializing Fabric REST API connection to: {self.fabric_gateway_url}")
             
             # Test connection to Fabric Gateway
             gateway_url = self.fabric_gateway_url
             
-            async with self.session.get(f"{gateway_url}/health") as response:
+            async with self.session.get(f"{gateway_url}/health", timeout=30) as response:
                 if response.status == 200:
                     health_data = await response.json()
-                    logger.info(f"✅ Fabric Gateway connected: {health_data.get('service', 'Gateway')}")
+                    logger.info(f"✅ Fabric Gateway connected successfully: {health_data.get('service', 'Gateway')}")
                     self.is_connected = True
                     self.fabric_gateway_url = gateway_url
                 else:
-                    logger.warning(f"⚠️ Fabric Gateway health check failed: {response.status}")
+                    logger.warning(f"⚠️ Fabric Gateway health check failed with status: {response.status}")
                     self.is_connected = False
             
         except Exception as e:
-            logger.warning(f"⚠️ Fabric REST API connection failed: {e}")
+            logger.warning(f"⚠️ Fabric REST API connection failed to {self.fabric_gateway_url}: {e}")
             self.is_connected = False
     
     async def setup_identities(self):
@@ -302,13 +305,17 @@ class FabricSecurityService:
                 # Fallback to REST API
                 async with self.session.post(
                     f"{self.fabric_gateway_url}/api/health-records",
-                    json=secure_record
+                    json=secure_record,
+                    timeout=30
                 ) as response:
                     if response.status == 201:
                         result = await response.json()
                     else:
-                        error_data = await response.json()
-                        logger.warning(f"⚠️ Fabric record creation failed: {error_data}")
+                        try:
+                            error_data = await response.json()
+                            logger.warning(f"⚠️ Fabric record creation failed ({response.status}): {error_data}")
+                        except:
+                            logger.warning(f"⚠️ Fabric record creation failed with status: {response.status}")
                         return None
             
             if result:
@@ -371,13 +378,14 @@ class FabricSecurityService:
             else:
                 # Fallback to REST API
                 async with self.session.get(
-                    f"{self.fabric_gateway_url}/api/health-records/{verification_id}/verify"
+                    f"{self.fabric_gateway_url}/api/health-records/{verification_id}/verify",
+                    timeout=30
                 ) as response:
                     if response.status == 200:
                         verification_result = await response.json()
                         verification_result = verification_result.get('data', {})
                     else:
-                        logger.warning(f"⚠️ Fabric verification failed: {response.status}")
+                        logger.warning(f"⚠️ Fabric verification failed with status: {response.status}")
                         return {"verified": False, "reason": "Fabric verification failed"}
             
             # Get transaction history
@@ -416,13 +424,14 @@ class FabricSecurityService:
             else:
                 # Fallback to REST API
                 async with self.session.get(
-                    f"{self.fabric_gateway_url}/api/health-records/{record_id}/history"
+                    f"{self.fabric_gateway_url}/api/health-records/{record_id}/history",
+                    timeout=30
                 ) as response:
                     if response.status == 200:
                         history_result = await response.json()
                         return history_result.get('data', [])
                     else:
-                        logger.warning(f"Failed to get Fabric history: {response.status}")
+                        logger.warning(f"⚠️ Failed to get Fabric history with status: {response.status}")
                         return []
                     
         except Exception as e:

@@ -49,6 +49,9 @@ IS_PRODUCTION = DEPLOYMENT_ENV.lower() == 'production'
 # Cold start handling for serverless deployments
 COLD_START_TIMEOUT = int(os.environ.get('COLD_START_TIMEOUT', '90'))  # seconds
 
+# Fabric Gateway Configuration - FIXED for deployment
+FABRIC_GATEWAY_URL = os.environ.get('FABRIC_GATEWAY_URL', 'https://digital-fabric-network.onrender.com')
+
 # Connection retry configuration
 MAX_RETRIES = int(os.environ.get('MAX_RETRIES', '3'))
 RETRY_DELAY = int(os.environ.get('RETRY_DELAY', '1'))  # seconds
