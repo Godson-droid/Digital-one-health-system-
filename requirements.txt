@@ -168,10 +168,6 @@ aiofiles==23.2.1
 httptools==0.6.1
 uvloop==0.19.0
 
-# Additional cryptographic dependencies
-cryptography-rust==0.1.0
-rust-crypto==0.1.0
-
 # Additional data processing dependencies
 scipy==1.12.0
 matplotlib==3.8.2
