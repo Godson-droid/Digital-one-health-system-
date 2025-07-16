@@ -22,7 +22,7 @@ pyotp==2.9.0
 bcrypt==4.1.0
 
 # HYPERLEDGER FABRIC DEPENDENCIES - PINNED FOR RENDER
-fabric-sdk-py
+fabric-sdk-py==0.8.6
 grpcio==1.60.1
 grpcio-tools==1.60.1
 
@@ -41,7 +41,7 @@ click==8.1.7
 # Data Processing - Pinned
 pandas==2.2.0
 numpy==1.26.0
-requests==2.31.0
+requests==2.20.0
 
 # File Handling - Pinned
 python-multipart==0.0.9
@@ -140,7 +140,7 @@ grpcio-status==1.60.1
 protobuf==4.25.1
 
 # Cryptographic sub-dependencies
-pysha3==1.0.2
+pysha3==1.0b1
 ed25519==1.5
 pynacl==1.5.0
 
