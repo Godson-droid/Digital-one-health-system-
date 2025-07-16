@@ -23,7 +23,6 @@ bcrypt==4.1.0
 
 # HYPERLEDGER FABRIC DEPENDENCIES - PINNED FOR RENDER
 fabric-sdk-py==1.0.0
-hfc
 grpcio==1.60.1
 grpcio-tools==1.60.1
 protobuf==4.25.1
