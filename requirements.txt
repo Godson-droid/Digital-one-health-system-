@@ -22,7 +22,7 @@ pyotp==2.9.0
 bcrypt==4.1.0
 
 # HYPERLEDGER FABRIC DEPENDENCIES - PINNED FOR RENDER
-fabric-sdk-py==1.0.0
+fabric-sdk-py
 grpcio==1.60.1
 grpcio-tools==1.60.1
 
