@@ -21,6 +21,9 @@ python-jose[cryptography]==3.3.0
 pyotp==2.9.0
 bcrypt==4.0.1
 pandas==1.5.3
+urllib3==1.26.18
+protobuf==4.21.12
+
 
 
 # HYPERLEDGER FABRIC DEPENDENCIES - PINNED FOR RENDER
@@ -67,7 +70,6 @@ pip==24.0
 
 # Additional core dependencies that might be missing
 six==1.16.0
-urllib3==2.2.1
 certifi==2024.2.2
 charset-normalizer==3.3.2
 idna==3.7
@@ -136,9 +138,6 @@ websocket-client==1.7.0
 # gRPC dependencies
 googleapis-common-protos==1.62.0
 grpcio-status==1.60.1
-
-# Protocol Buffers dependencies
-protobuf==4.25.1
 
 # Cryptographic sub-dependencies
 pysha3==1.0b1
