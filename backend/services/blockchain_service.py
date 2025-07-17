@@ -4,8 +4,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from ..models.blockchain import Block, BlockData, Blockchain, IntegrityCheck
-from ..database import get_database
+from backend.models.blockchain import Block, BlockData, Blockchain, IntegrityCheck
+from backend.database import get_database
 
 class BlockchainService:
     def __init__(self):
