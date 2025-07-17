@@ -1,0 +1,92 @@
+{
+    "name": "digital-one-health-network",
+    "version": "1.0.0",
+    "client": {
+        "organization": "Hospital",
+        "connection": {
+            "timeout": {
+                "peer": {
+                    "endorser": "300"
+                },
+                "orderer": "300"
+            }
+        }
+    },
+    "organizations": {
+        "Hospital": {
+            "mspid": "HospitalMSP",
+            "peers": ["peer0.hospital.digitalonehealth.com"],
+            "certificateAuthorities": ["ca.hospital.digitalonehealth.com"]
+        },
+        "Research": {
+            "mspid": "ResearchMSP",
+            "peers": ["peer0.research.digitalonehealth.com"],
+            "certificateAuthorities": ["ca.research.digitalonehealth.com"]
+        },
+        "Individual": {
+            "mspid": "IndividualMSP",
+            "peers": ["peer0.individual.digitalonehealth.com"],
+            "certificateAuthorities": ["ca.individual.digitalonehealth.com"]
+        }
+    },
+    "orderers": {
+        "orderer.digitalonehealth.com": {
+            "url": "grpc://localhost:7050",
+            "grpcOptions": {
+                "ssl-target-name-override": "orderer.digitalonehealth.com"
+            }
+        }
+    },
+    "peers": {
+        "peer0.hospital.digitalonehealth.com": {
+            "url": "grpc://localhost:7051",
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.hospital.digitalonehealth.com"
+            }
+        },
+        "peer0.research.digitalonehealth.com": {
+            "url": "grpc://localhost:9051",
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.research.digitalonehealth.com"
+            }
+        },
+        "peer0.individual.digitalonehealth.com": {
+            "url": "grpc://localhost:11051",
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.individual.digitalonehealth.com"
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "ca.hospital.digitalonehealth.com": {
+            "url": "http://localhost:7054",
+            "caName": "ca-hospital",
+            "tlsCACerts": {
+                "pem": []
+            },
+            "httpOptions": {
+                "verify": false
+            }
+        },
+        "ca.research.digitalonehealth.com": {
+            "url": "http://localhost:8054",
+            "caName": "ca-research",
+            "tlsCACerts": {
+                "pem": []
+            },
+            "httpOptions": {
+                "verify": false
+            }
+        },
+        "ca.individual.digitalonehealth.com": {
+            "url": "http://localhost:9054",
+            "caName": "ca-individual",
+            "tlsCACerts": {
+                "pem": []
+            },
+            "httpOptions": {
+                "verify": false
+            }
+        }
+    }
+}
