@@ -2,6 +2,9 @@
 Digital One Health System - FastAPI Backend
 Complete MVC architecture with blockchain integrity and enterprise security
 """
+import sys
+from pathlib import Path
+
 
 import asyncio
 import logging
@@ -17,7 +20,7 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 # Add backend directory to path for imports
-backend_dir = Path(__file__).parent
+backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
