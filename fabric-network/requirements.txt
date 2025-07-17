@@ -43,7 +43,7 @@ cryptography-vectors==42.0.8
 docker==5.0.3
 pyyaml==6.0.1
 click==8.1.7
-urllib3==1.26.16
+urllib3<1.25
 
 # === Data Processing ===
 pandas==2.2.0
