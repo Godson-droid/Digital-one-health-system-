@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import aiohttp
 
-from ..config import FABRIC_GATEWAY_URL
+from backend.config import FABRIC_GATEWAY_URL
 
 # Hyperledger Fabric SDK imports
 try:
@@ -24,7 +24,7 @@ except ImportError as e:
     print(f"⚠️ Fabric SDK not available: {e}")
     FABRIC_SDK_AVAILABLE = False
 
-from ..config import DEBUG
+from backend.config import DEBUG
 
 logger = logging.getLogger(__name__)
 
