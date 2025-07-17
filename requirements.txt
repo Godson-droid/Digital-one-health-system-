@@ -103,6 +103,7 @@ pyyaml==6.0.1
 
 # Click for CLI
 click==8.1.7
+git+https://github.com/hyperledger/fabric-sdk-py.git
 
 
 # Jinja2 for templating
