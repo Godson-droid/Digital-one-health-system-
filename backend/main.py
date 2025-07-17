@@ -29,14 +29,14 @@ from backend.config import (
     CORS_ORIGINS, REQUEST_TIMEOUT, IS_PRODUCTION, 
     HOST, PORT, DEBUG, MAX_RETRIES, RETRY_DELAY
 )
-from database import get_database, close_database, test_database_connection
-from services.user_service import UserService
-from services.fabric_integration_service import get_fabric_security_service
+from backend.database import get_database, close_database, test_database_connection
+from backend.services.user_service import UserService
+from backend.services.fabric_integration_service import get_fabric_security_service
 
 # Import route modules
-from routes.auth_routes import router as auth_router
-from routes.health_record_routes import router as health_record_router
-from routes.blockchain_routes import router as blockchain_router
+from backend.routes.auth_routes import router as auth_router
+from backend.routes.health_record_routes import router as health_record_router
+from backend.routes.blockchain_routes import router as blockchain_router
 
 # Configure logging
 logging.basicConfig(
