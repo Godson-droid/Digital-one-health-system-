@@ -6,7 +6,7 @@ import time
 import asyncio
 from pathlib import Path
 
-from .routes import auth_routes, health_record_routes, blockchain_routes
+from backend.routes import auth_routes, health_record_routes, blockchain_routes
 from .database import close_database, get_database
 from .config import DEBUG, CORS_ORIGINS, REQUEST_TIMEOUT, HOST, PORT
 from .services.user_service import UserService
