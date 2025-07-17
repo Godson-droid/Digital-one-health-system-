@@ -3,8 +3,8 @@ from typing import Optional, List
 from datetime import datetime
 
 from backend.models.user import UserCreate, UserInDB, User
-from ..database import get_database
-from ..utils.security import get_password_hash
+from backend.database import get_database
+from backend.utils.security import get_password_hash
 
 class UserService:
     def __init__(self):
