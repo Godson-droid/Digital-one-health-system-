@@ -25,7 +25,7 @@ if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
 # Import configuration and services
-from config import (
+from backend.config import (
     CORS_ORIGINS, REQUEST_TIMEOUT, IS_PRODUCTION, 
     HOST, PORT, DEBUG, MAX_RETRIES, RETRY_DELAY
 )
