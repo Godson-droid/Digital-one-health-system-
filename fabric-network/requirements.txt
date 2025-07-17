@@ -12,7 +12,6 @@ requests-oauthlib==2.0.0
 python-dotenv==1.0.1
 pymongo==4.5.0
 motor==3.3.1
-requests>=2.25.1
 urllib3>=1.25.4,<2.2.0
 botocore==1.34.162
 
@@ -29,10 +28,21 @@ pyotp==2.9.0
 bcrypt==4.0.1  # downgraded from 4.1.0 (yanked version)
 
 # === Hyperledger Fabric SDK ===
-fabric-sdk-py==1.0.0  # supports hfc.api
-grpcio==1.43.0
-grpcio-tools==1.43.0
-protobuf==3.20.3
+aiogrpc==1.8
+cryptography==44.0.2
+grpcio==1.62.2
+grpcio-tools==1.62.2
+hkdf>=0.0.3
+lark-parser==0.7.1
+pycryptodomex>=3.4.2
+safe-pysha3>=1.0.3
+requests>=2.20.0
+rx>=3.0.1
+six>=1.4.0
+protobuf==4.25.6
+couchdb>=1.2
+
+# supports hfc.api
 pysha3==1.0b1  # must be this exact version
 
 # === Fabric Crypto Libraries ===
