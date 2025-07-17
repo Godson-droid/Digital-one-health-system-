@@ -32,7 +32,6 @@ protobuf==3.20.3
 pysha3==1.0b1  # must be this exact version
 
 # === Additional Fabric Dependencies ===
-fabric-ca-client>=2.5.0
 fabric-network>=2.5.0
 
 # === Fabric Crypto Libraries ===
