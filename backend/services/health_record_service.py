@@ -3,10 +3,10 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import json
 
-from ..models.health_record import HealthRecordCreate, HealthRecordInDB, HealthRecord, HealthRecordUpdate
-from ..models.user import User
-from ..utils.encryption import encrypt_data, decrypt_data
-from ..database import get_database
+from backend.models.health_record import HealthRecordCreate, HealthRecordInDB, HealthRecord, HealthRecordUpdate
+from backend.models.user import User
+from backend.utils.encryption import encrypt_data, decrypt_data
+from backend.database import get_database
 
 class HealthRecordService:
     def __init__(self):
