@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional, List
 from datetime import datetime
 
-from ..models.user import UserCreate, UserInDB, User
+from backend.models.user import UserCreate, UserInDB, User
 from ..database import get_database
 from ..utils.security import get_password_hash
 
