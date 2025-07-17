@@ -16,7 +16,7 @@ const getBackendUrl = () => {
     return 'http://localhost:8001';
   } else {
     // Production environment - use the deployed backend URL
-    return 'https://digital-one-health-system.onrender.com';
+    return 'https://digital-one-health-system-cjum.onrender.com';
   }
 };
 

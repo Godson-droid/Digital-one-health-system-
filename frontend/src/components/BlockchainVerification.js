@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // Backend URL configuration - FIXED for your deployment
-const BACKEND_URL = 'https://digital-one-health-system.onrender.com';
+const BACKEND_URL = 'https://digital-one-health-system-cjum.onrender.com';
 const API = `${BACKEND_URL}/api`;
 
 const BlockchainVerification = ({ recordId, onClose }) => {

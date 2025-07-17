@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 
 class DigitalOneHealthTester:
-    def __init__(self, base_url="https://5ff0c78c-0add-4ab2-81f7-724ded35f968.preview.emergentagent.com"):
+    def __init__(self, base_url="https://digital-one-health-system-cjum.onrender.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tokens = {}  # Store tokens for different users
