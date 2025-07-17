@@ -50,9 +50,11 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        service: 'Digital One Health Cloud Fabric Gateway',
+        service: 'Digital One Health Hyperledger Fabric Gateway',
         version: '2.0.0',
         gateway: status,
+        fabricConnected: status.fabricConnected || false,
+        mode: status.mode || 'unknown',
         endpoints: {
             health: '/health',
             createRecord: 'POST /api/health-records',
@@ -70,10 +72,11 @@ app.get('/health', (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
     res.json({
-        message: 'Digital One Health Cloud Fabric Gateway',
+        message: 'Digital One Health Hyperledger Fabric Gateway',
         version: '2.0.0',
         status: 'running',
-        mode: 'cloud',
+        mode: fabricGateway ? fabricGateway.getStatus().mode : 'unknown',
+        fabricConnected: fabricGateway ? fabricGateway.getStatus().fabricConnected : false,
         documentation: '/health',
         timestamp: new Date().toISOString()
     });
@@ -395,11 +398,13 @@ async function startServer() {
         
         // Start HTTP server
         app.listen(PORT, '0.0.0.0', () => {
-            console.log('🚀 Digital One Health Cloud Fabric Gateway started successfully!');
+            console.log('🚀 Digital One Health Hyperledger Fabric Gateway started successfully!');
             console.log(`📡 Server running on port ${PORT}`);
             console.log(`🌐 Health check: http://localhost:${PORT}/health`);
             console.log(`📋 API base: http://localhost:${PORT}/api`);
-            console.log(`🔧 Mode: Cloud (Mock Fabric Network)`);
+            const status = fabricGateway ? fabricGateway.getStatus() : { mode: 'unknown', fabricConnected: false };
+            console.log(`🔧 Mode: ${status.mode}`);
+            console.log(`🔗 Fabric Connected: ${status.fabricConnected ? 'Yes' : 'No (Fallback Mode)'}`);
             console.log('✅ Ready to accept requests!');
         });
     } catch (error) {
