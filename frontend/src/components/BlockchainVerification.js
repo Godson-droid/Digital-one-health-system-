@@ -163,10 +163,7 @@ const BlockchainVerification = ({ recordId, onClose }) => {
                     {verificationResult.fabric_verification && (
                       <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-xs text-blue-700 font-medium">
-                          🔐 Enterprise Security: {verificationResult.fabric_verification.security_level || 'Standard'}
-                        </p>
-                        <p className="text-xs text-blue-600">
-                          Hyperledger Fabric: {verificationResult.fabric_verification.verified ? '✅ Verified' : '❌ Failed'}
+                          🔐 Security Level: Native Proof-of-Work Blockchain
                         </p>
                       </div>
                     )}

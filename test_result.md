@@ -258,14 +258,14 @@ backend:
   - task: "Blockchain Integrity Verification"
     implemented: true
     working: "NA"
-    file: "backend/services/blockchain_service.py"
+    file: "backend/services/blockchain_service.py, backend/models/blockchain.py"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented proof-of-work blockchain with SHA-256 hashing, chain integrity verification, and record-specific integrity checks."
+        comment: "Implemented native proof-of-work blockchain with SHA-256 hashing, chain integrity verification, and record-specific integrity checks. Removed Hyperledger Fabric dependency."
 
   - task: "Environment Configuration"
     implemented: true
@@ -277,7 +277,7 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Configuration setup with MongoDB Atlas connection, JWT secrets, and encryption keys provided by user."
+        comment: "Configuration setup with MongoDB Atlas connection, JWT secrets, and encryption keys. Removed Fabric Gateway configuration."
 
 frontend:
   - task: "Frontend Timeout and Error Handling"
@@ -404,4 +404,4 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "User reported critical deployment issues: 1) CORS problems preventing frontend-backend communication, 2) Request timeouts exceeding 10 seconds. I've implemented comprehensive fixes including: enhanced CORS configuration with proper origins and headers, request timeout middleware (30s), database connection timeouts (10s), improved error handling, health check endpoint, frontend connection monitoring, and better timeout handling. All timeout-related and CORS issues should now be resolved. Priority testing needed for: CORS functionality, request timeout handling, database connectivity, frontend-backend communication, and error scenarios."
+    message: "Removed Hyperledger Fabric integration as requested by user. System now uses only the native Proof-of-Work blockchain for data integrity. All cryptographic features remain intact: password hashing (bcrypt), data encryption (AES-256), JWT tokens, MFA (TOTP), and SHA-256 blockchain hashing. The system maintains full security through the native blockchain implementation."

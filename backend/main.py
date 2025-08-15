@@ -31,7 +31,6 @@ from backend.config import (
 )
 from backend.database import get_database, close_database, test_database_connection
 from backend.services.user_service import UserService
-from backend.services.fabric_integration_service import get_fabric_security_service
 
 # Import route modules
 from backend.routes.auth_routes import router as auth_router
@@ -93,17 +92,6 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"⚠️ Admin user setup warning: {e}")
         
-        # Initialize Fabric Security Service
-        try:
-            logger.info("🔐 Initializing Full Hyperledger Fabric Enterprise Security...")
-            fabric_service = await get_fabric_security_service()
-            if fabric_service.is_connected:
-                logger.info("✅ Full Hyperledger Fabric Security Service initialized")
-            else:
-                logger.info("ℹ️ Fabric Security Service initialized in fallback mode")
-        except Exception as e:
-            logger.warning(f"⚠️ Fabric Security Service warning: {e}")
-        
         logger.info("✅ Application startup complete")
         
         yield
@@ -114,14 +102,6 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("🛑 Shutting down Digital One Health System...")
-    
-    try:
-        # Close Fabric Security Service
-        fabric_service = await get_fabric_security_service()
-        await fabric_service.close()
-        logger.info("✅ Fabric Security Service closed")
-    except Exception as e:
-        logger.warning(f"⚠️ Error closing Fabric service: {e}")
     
     try:
         # Close database connections
@@ -182,13 +162,6 @@ async def health_check():
         # Test database connection
         db_status = await test_database_connection()
         
-        # Test Fabric service status
-        try:
-            fabric_service = await get_fabric_security_service()
-            fabric_status = fabric_service.is_connected
-        except Exception:
-            fabric_status = False
-        
         status = "healthy" if db_status else "degraded"
         
         return {
@@ -197,14 +170,12 @@ async def health_check():
             "version": "2.0.0",
             "services": {
                 "database": "connected" if db_status else "disconnected",
-                "fabric_security": "connected" if fabric_status else "fallback_mode",
                 "blockchain": "operational",
                 "api": "operational"
             },
             "features": {
                 "mvc_architecture": True,
                 "blockchain_integrity": True,
-                "enterprise_security": True,
                 "multi_factor_auth": True,
                 "role_based_access": True,
                 "data_encryption": True
@@ -229,7 +200,7 @@ async def root():
         "message": "Digital One Health System API",
         "version": "2.0.0",
         "architecture": "MVC with Blockchain Integrity",
-        "security": "Enterprise Hyperledger Fabric",
+        "security": "Native Proof-of-Work Blockchain",
         "documentation": "/docs" if DEBUG else "Contact administrator",
         "health_check": "/health",
         "api_base": "/api"

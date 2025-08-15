@@ -1,13 +1,6 @@
 # Render.com ignore file
 # Files and directories to ignore during deployment
 
-# Fabric network files (not needed for cloud deployment)
-fabric-network/
-chaincode/
-organizations/
-channel-artifacts/
-system-genesis-block/
-
 # Development files
 .env.local
 .env.development

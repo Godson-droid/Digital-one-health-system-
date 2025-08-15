@@ -6,20 +6,12 @@ from ..models.health_record import HealthRecordCreate, HealthRecord, HealthRecor
 from ..models.user import User
 from ..services.health_record_service import HealthRecordService
 from ..services.blockchain_service import BlockchainService
-from ..services.fabric_integration_service import get_fabric_security_service
 from ..utils.permissions import check_record_access, can_modify_record, can_change_privacy, can_verify_record
 
 class HealthRecordController:
     def __init__(self):
         self.health_record_service = HealthRecordService()
         self.blockchain_service = BlockchainService()
-        self.fabric_security_service = None
-
-    async def get_fabric_service(self):
-        """Get Fabric security service instance"""
-        if self.fabric_security_service is None:
-            self.fabric_security_service = await get_fabric_security_service()
-        return self.fabric_security_service
     async def create_health_record(self, record_data: HealthRecordCreate, current_user: User) -> dict:
         """Create a new health record with blockchain integrity"""
         try:
@@ -33,19 +25,7 @@ class HealthRecordController:
             # Create record
             record = await self.health_record_service.create_record(record_data, current_user.id)
             
-            # ENHANCED: Create secure record on Fabric blockchain
-            fabric_service = await self.get_fabric_service()
-            user_context = {
-                "user_id": current_user.id,
-                "role": current_user.role,
-                "username": current_user.username
-            }
-            
-            fabric_result = await fabric_service.create_secure_health_record(
-                record_data.dict(), user_context
-            )
-            
-            # Add to blockchain for integrity - with enhanced error handling
+            # Add to blockchain for integrity
             try:
                 data_hash = self.blockchain_service.calculate_hash(record.dict())
                 block = await self.blockchain_service.add_block(
@@ -59,15 +39,6 @@ class HealthRecordController:
                 await self.health_record_service.update_blockchain_info(
                     record.id, block.hash, block.index
                 )
-                
-                # Update with Fabric blockchain info if available
-                if fabric_result:
-                    await self.health_record_service.update_fabric_info(
-                        record.id, 
-                        fabric_result.get("fabric_record_id"),
-                        fabric_result.get("blockchain_hash"),
-                        fabric_result.get("transaction_id")
-                    )
                 
                 print(f"Record {record.id} successfully added to blockchain with block {block.index}")
             except Exception as blockchain_error:
@@ -274,13 +245,6 @@ class HealthRecordController:
                 integrity_result = await self.blockchain_service.verify_record_integrity(record_id)
                 blockchain_history = await self.blockchain_service.get_record_history(record_id)
                 
-                # ENHANCED: Verify using Fabric security
-                fabric_service = await self.get_fabric_service()
-                fabric_verification = await fabric_service.verify_record_security(
-                    record_id, 
-                    getattr(record, 'fabric_record_id', None)
-                )
-                
                 # Get current record hash for comparison
                 current_hash = self.blockchain_service.calculate_hash(record.dict())
                 
@@ -293,11 +257,10 @@ class HealthRecordController:
             return {
                 "record_id": record_id,
                 "is_verified": integrity_result,
-                "fabric_verification": fabric_verification,
                 "blockchain_history": blockchain_history,
                 "current_hash": current_hash,
                 "blockchain_hash": record.blockchain_hash if hasattr(record, 'blockchain_hash') else None,
-                "security_level": fabric_verification.get("security_level", "standard"),
+                "security_level": "native_proof_of_work",
                 "verified_at": datetime.utcnow()
             }
         except HTTPException:

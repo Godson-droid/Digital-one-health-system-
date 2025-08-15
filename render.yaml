@@ -22,5 +22,3 @@ services:
         value: 1000
       - key: PIP_DEFAULT_TIMEOUT
         value: 1000
-      - key: FABRIC_GATEWAY_URL
-        value: https://digital-fabric-network.onrender.com
