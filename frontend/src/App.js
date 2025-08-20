@@ -72,8 +72,10 @@ function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showMFASetup, setShowMFASetup] = useState(false);
   const [showBlockchainVerification, setShowBlockchainVerification] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState(null);
   const [mfaData, setMfaData] = useState(null);
+  const [emailVerificationMessage, setEmailVerificationMessage] = useState('');
 
   // Connection monitoring
   useEffect(() => {
@@ -176,7 +178,13 @@ function App() {
       // Handle specific error cases
       let errorMessage = 'Login failed';
       
-      if (error.response?.status === 401) {
+      if (error.response?.status === 403) {
+        errorMessage = 'Please verify your email address before logging in. Check your email for verification instructions.';
+        setShowEmailVerification(true);
+        setEmailVerificationMessage(errorMessage);
+      } else if (error.response?.status === 423) {
+        errorMessage = 'Account is temporarily locked due to multiple failed login attempts. Please try again later.';
+      } else if (error.response?.status === 401) {
         errorMessage = error.response?.data?.detail || 'Incorrect username or password';
       } else if (error.response?.status === 400) {
         errorMessage = error.response?.data?.detail || 'Invalid login data';
@@ -200,8 +208,10 @@ function App() {
       console.log('🔄 Attempting registration...');
       const response = await axios.post(`${API}/auth/register`, registerData);
       
-      if (response.data?.message) {
-        toast.success('Registration successful! Please log in.');
+      if (response.data?.message && response.data?.verification_required) {
+        toast.success('Registration successful! Please check your email to verify your account before logging in.');
+        setShowEmailVerification(true);
+        setEmailVerificationMessage(response.data.message);
         console.log('✅ Registration successful');
         return { success: true };
       }
@@ -227,6 +237,24 @@ function App() {
     }
   };
 
+  const handleEmailVerification = async (token) => {
+    try {
+      console.log('🔄 Verifying email...');
+      const response = await axios.post(`${API}/auth/verify-email`, { token });
+      
+      if (response.data?.message) {
+        toast.success('Email verified successfully! You can now log in.');
+        setShowEmailVerification(false);
+        setEmailVerificationMessage('');
+        return { success: true };
+      }
+    } catch (error) {
+      console.error('❌ Email verification failed:', error);
+      const errorMessage = error.response?.data?.detail || 'Email verification failed';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
