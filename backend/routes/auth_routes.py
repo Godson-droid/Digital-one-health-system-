@@ -1,14 +1,24 @@
 from fastapi import APIRouter, Depends, Query
 from ..controllers.auth_controller import AuthController
-from ..models.user import UserCreate, UserLogin, Token, MFASetup, User
+from ..models.user import UserCreate, UserLogin, Token, MFASetup, User, EmailVerification, EmailVerificationConfirm
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 auth_controller = AuthController()
 
-@router.post("/register", response_model=dict)
+@router.post("/register", response_model=EmailVerification)
 async def register_user(user_data: UserCreate):
     """Register a new user"""
     return await auth_controller.register_user(user_data)
+
+@router.post("/verify-email")
+async def verify_email(verification_data: EmailVerificationConfirm):
+    """Verify user email with token"""
+    return await auth_controller.verify_email(verification_data)
+
+@router.post("/resend-verification")
+async def resend_verification_email(email: str = Query(...)):
+    """Resend verification email"""
+    return await auth_controller.resend_verification_email(email)
 
 @router.post("/login", response_model=Token)
 async def login_user(login_data: UserLogin):

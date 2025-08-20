@@ -44,7 +44,22 @@ class HealthRecordService:
                 data={"encrypted": encrypted_data},
                 is_public=record_data.is_public,
                 owner_id=owner_id,
-                created_by=owner_id
+                created_by=owner_id,
+                # Enhanced fields from HealthRecordCreate
+                symptoms=record_data.symptoms,
+                diagnosis=record_data.diagnosis,
+                treatment=record_data.treatment,
+                vital_signs=record_data.vital_signs,
+                lab_results=record_data.lab_results,
+                medications=record_data.medications,
+                allergies=record_data.allergies,
+                species=record_data.species,
+                breed=record_data.breed,
+                age=record_data.age,
+                location=record_data.location,
+                environmental_factors=record_data.environmental_factors,
+                soil_conditions=record_data.soil_conditions,
+                climate_data=record_data.climate_data
             )
             
             # Insert into database
@@ -84,11 +99,11 @@ class HealthRecordService:
             return None
 
     async def get_records_for_user(self, user: User) -> List[HealthRecordInDB]:
-        """Get health records based on user role and permissions - FIXED PUBLIC RECORD ACCESS"""
+        """Get health records based on user role and permissions - ENHANCED FOR RESEARCHERS"""
         try:
             db = await self.get_db()
             
-            # Build query based on user role - ENHANCED FOR PUBLIC RECORD VISIBILITY
+            # Build query based on user role - RESEARCHERS GET FULL ACCESS TO PUBLIC RECORDS
             query = {}
             if user.role == "individual":
                 # Individual users can see:
@@ -111,8 +126,7 @@ class HealthRecordService:
                     ]
                 }
             elif user.role == "researcher":
-                # Researchers can see:
-                # 1. All public records only
+                # Researchers can see ALL public records with FULL DATA ACCESS
                 query = {"is_public": True}
             # Admin can see all records (no query filter)
             
@@ -128,7 +142,7 @@ class HealthRecordService:
             for record_data in records:
                 if record_data.get("data") is not None and record_data["data"].get("encrypted") is not None:
                     try:
-                        # Check if user has access to decrypt
+                        # ENHANCED: Researchers get FULL access to public record data
                         if (user.role == "admin" or 
                             record_data["owner_id"] == user.id or
                             (record_data["is_public"] and user.role in ["healthcare_provider", "researcher", "individual"])):
@@ -166,6 +180,36 @@ class HealthRecordService:
                 # Encrypt the new data
                 encrypted_data = encrypt_data(json.dumps(update_data.data))
                 update_dict["data"] = {"encrypted": encrypted_data}
+            
+            # Update enhanced fields
+            if update_data.symptoms is not None:
+                update_dict["symptoms"] = update_data.symptoms
+            if update_data.diagnosis is not None:
+                update_dict["diagnosis"] = update_data.diagnosis
+            if update_data.treatment is not None:
+                update_dict["treatment"] = update_data.treatment
+            if update_data.vital_signs is not None:
+                update_dict["vital_signs"] = update_data.vital_signs
+            if update_data.lab_results is not None:
+                update_dict["lab_results"] = update_data.lab_results
+            if update_data.medications is not None:
+                update_dict["medications"] = update_data.medications
+            if update_data.allergies is not None:
+                update_dict["allergies"] = update_data.allergies
+            if update_data.species is not None:
+                update_dict["species"] = update_data.species
+            if update_data.breed is not None:
+                update_dict["breed"] = update_data.breed
+            if update_data.age is not None:
+                update_dict["age"] = update_data.age
+            if update_data.location is not None:
+                update_dict["location"] = update_data.location
+            if update_data.environmental_factors is not None:
+                update_dict["environmental_factors"] = update_data.environmental_factors
+            if update_data.soil_conditions is not None:
+                update_dict["soil_conditions"] = update_data.soil_conditions
+            if update_data.climate_data is not None:
+                update_dict["climate_data"] = update_data.climate_data
             
             update_dict["updated_at"] = datetime.utcnow()
             

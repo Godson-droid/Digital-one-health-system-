@@ -9,9 +9,10 @@ import base64
 from io import BytesIO
 import uuid
 
-from ..models.user import UserCreate, UserLogin, User, Token, MFASetup
+from ..models.user import UserCreate, UserLogin, User, Token, MFASetup, EmailVerification, EmailVerificationConfirm
 from ..services.user_service import UserService
 from ..services.blockchain_service import BlockchainService
+from ..services.email_service import EmailService
 from ..utils.security import verify_password, get_password_hash, create_access_token, verify_mfa_token
 from ..config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -21,8 +22,9 @@ class AuthController:
     def __init__(self):
         self.user_service = UserService()
         self.blockchain_service = BlockchainService()
+        self.email_service = EmailService()
 
-    async def register_user(self, user_data: UserCreate) -> dict:
+    async def register_user(self, user_data: UserCreate) -> EmailVerification:
         """Register a new user with admin restriction"""
         try:
             # Validate input data
@@ -32,10 +34,36 @@ class AuthController:
                     detail="Username, password, and email are required"
                 )
             
-            if len(user_data.password) < 6:
+            # Enhanced password requirements
+            if len(user_data.password) < 8:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Password must be at least 6 characters long"
+                    detail="Password must be at least 8 characters long"
+                )
+            
+            # Check password complexity
+            if not any(c.isupper() for c in user_data.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password must contain at least one uppercase letter"
+                )
+            
+            if not any(c.islower() for c in user_data.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password must contain at least one lowercase letter"
+                )
+            
+            if not any(c.isdigit() for c in user_data.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password must contain at least one number"
+                )
+            
+            if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in user_data.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password must contain at least one special character"
                 )
             
             # Check if user exists
@@ -69,13 +97,30 @@ class AuthController:
             try:
                 hashed_password = get_password_hash(user_data.password)
             except Exception as hash_error:
-                logger.error(f"Password hashing failed: {hash_error}")
+                print(f"Password hashing failed: {hash_error}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Password processing failed"
                 )
+            
+            # Generate email verification token
+            verification_token = self.email_service.generate_verification_token()
+            verification_expires = self.email_service.generate_verification_expiry()
                 
             user = await self.user_service.create_user(user_data, hashed_password)
+            
+            # Update user with verification token
+            await self.user_service.set_email_verification_token(
+                user.id, verification_token, verification_expires
+            )
+            
+            # Send verification email
+            email_sent = await self.email_service.send_verification_email(
+                user.email, user.username, verification_token
+            )
+            
+            if not email_sent:
+                print(f"Warning: Failed to send verification email to {user.email}")
             
             # Log user creation to blockchain
             try:
@@ -88,7 +133,10 @@ class AuthController:
             except Exception as e:
                 print(f"Warning: Failed to log user creation to blockchain: {e}")
 
-            return {"message": "User registered successfully", "user_id": user.id}
+            return EmailVerification(
+                message="User registered successfully. Please check your email to verify your account before logging in.",
+                verification_required=True
+            )
         except HTTPException:
             raise
         except Exception as e:
@@ -97,6 +145,49 @@ class AuthController:
                 detail=f"Registration failed: {str(e)}"
             )
 
+    async def verify_email(self, verification_data: EmailVerificationConfirm) -> dict:
+        """Verify user email with token"""
+        try:
+            user = await self.user_service.get_user_by_verification_token(verification_data.token)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired verification token"
+                )
+            
+            # Check if token is expired
+            if user.email_verification_expires and user.email_verification_expires < datetime.utcnow():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification token has expired. Please request a new one."
+                )
+            
+            # Verify email
+            await self.user_service.verify_email(user.id)
+            
+            # Send welcome email
+            await self.email_service.send_welcome_email(user.email, user.username)
+            
+            # Log email verification to blockchain
+            try:
+                await self.blockchain_service.add_block(
+                    record_id=user.id,
+                    action="email_verified",
+                    data_hash=self.blockchain_service.calculate_hash({"user_id": user.id, "email": user.email}),
+                    user_id=user.id
+                )
+            except Exception as e:
+                print(f"Warning: Failed to log email verification to blockchain: {e}")
+            
+            return {"message": "Email verified successfully. You can now log in to your account."}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Email verification failed: {str(e)}"
+            )
     async def login_user(self, login_data: UserLogin) -> Token:
         """Authenticate user and return token"""
         try:
@@ -114,14 +205,30 @@ class AuthController:
                     detail="Incorrect username or password"
                 )
             
+            # Check if account is locked
+            if user.account_locked_until and user.account_locked_until > datetime.utcnow():
+                raise HTTPException(
+                    status_code=status.HTTP_423_LOCKED,
+                    detail="Account is temporarily locked due to multiple failed login attempts. Please try again later."
+                )
+            
+            # Check if email is verified
+            if not user.email_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Please verify your email address before logging in. Check your email for verification instructions."
+                )
+            
             # Verify password with enhanced error handling
             try:
                 password_valid = verify_password(login_data.password, user.hashed_password)
             except Exception as verify_error:
-                logger.error(f"Password verification error: {verify_error}")
+                print(f"Password verification error: {verify_error}")
                 password_valid = False
             
             if not password_valid:
+                # Increment failed login attempts
+                await self.user_service.increment_failed_login_attempts(user.id)
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Incorrect username or password"
@@ -140,6 +247,10 @@ class AuthController:
                         detail="Invalid MFA token"
                     )
 
+            # Reset failed login attempts and update last login
+            await self.user_service.reset_failed_login_attempts(user.id)
+            await self.user_service.update_last_login(user.id)
+
             # Create access token
             access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(
@@ -151,7 +262,9 @@ class AuthController:
                 "username": user.username,
                 "email": user.email,
                 "role": user.role,
-                "full_name": user.full_name
+                "full_name": user.full_name,
+                "email_verified": user.email_verified,
+                "mfa_enabled": user.mfa_enabled
             }
 
             return Token(
@@ -167,9 +280,53 @@ class AuthController:
                 detail=f"Login failed: {str(e)}"
             )
 
+    async def resend_verification_email(self, email: str) -> dict:
+        """Resend verification email"""
+        try:
+            user = await self.user_service.get_user_by_email(email)
+            if not user:
+                # Don't reveal if email exists or not for security
+                return {"message": "If the email exists in our system, a verification email has been sent."}
+            
+            if user.email_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email is already verified"
+                )
+            
+            # Generate new verification token
+            verification_token = self.email_service.generate_verification_token()
+            verification_expires = self.email_service.generate_verification_expiry()
+            
+            # Update user with new token
+            await self.user_service.set_email_verification_token(
+                user.id, verification_token, verification_expires
+            )
+            
+            # Send verification email
+            await self.email_service.send_verification_email(
+                user.email, user.username, verification_token
+            )
+            
+            return {"message": "Verification email sent successfully."}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to resend verification email: {str(e)}"
+            )
     async def setup_mfa(self, current_user: User) -> MFASetup:
         """Setup MFA for user"""
         try:
+            # Check if email is verified
+            if not current_user.email_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Please verify your email address before setting up MFA"
+                )
+
             # Generate secret for MFA
             secret = pyotp.random_base32()
 

@@ -1,6 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from backend.models.user import UserCreate, UserInDB, User
 from backend.database import get_database
@@ -54,6 +54,23 @@ class UserService:
             print(f"Error getting user by username: {e}")
             return None
 
+    async def get_user_by_email(self, email: str) -> Optional[UserInDB]:
+        """Get user by email"""
+        try:
+            if not email:
+                return None
+                
+            db = await self.get_db()
+            user_data = await db.users.find_one({"email": email})
+            
+            if user_data is None:
+                return None
+                
+            return UserInDB(**user_data)
+        except Exception as e:
+            print(f"Error getting user by email: {e}")
+            return None
+
     async def get_user_by_id(self, user_id: str) -> Optional[UserInDB]:
         """Get user by ID"""
         try:
@@ -90,6 +107,23 @@ class UserService:
             print(f"Error checking user existence: {e}")
             return None
 
+    async def get_user_by_verification_token(self, token: str) -> Optional[UserInDB]:
+        """Get user by email verification token"""
+        try:
+            if not token:
+                return None
+                
+            db = await self.get_db()
+            user_data = await db.users.find_one({"email_verification_token": token})
+            
+            if user_data is None:
+                return None
+                
+            return UserInDB(**user_data)
+        except Exception as e:
+            print(f"Error getting user by verification token: {e}")
+            return None
+
     async def get_admin_user(self) -> Optional[UserInDB]:
         """Get the admin user (should only be one)"""
         try:
@@ -124,6 +158,9 @@ class UserService:
             hashed_password = get_password_hash(admin_data.password)
             admin_user = await self.create_user(admin_data, hashed_password)
             
+            # Auto-verify admin email
+            await self.verify_email(admin_user.id)
+            
             print("✅ Default admin user created:")
             print(f"   Username: admin")
             print(f"   Password: Admin123!")
@@ -133,6 +170,131 @@ class UserService:
         except Exception as e:
             print(f"Error creating default admin: {e}")
             return None
+
+    async def set_email_verification_token(self, user_id: str, token: str, expires: datetime) -> bool:
+        """Set email verification token for user"""
+        try:
+            if not user_id:
+                return False
+                
+            db = await self.get_db()
+            result = await db.users.update_one(
+                {"id": user_id},
+                {
+                    "$set": {
+                        "email_verification_token": token,
+                        "email_verification_expires": expires,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error setting email verification token: {e}")
+            return False
+
+    async def verify_email(self, user_id: str) -> bool:
+        """Mark user email as verified"""
+        try:
+            if not user_id:
+                return False
+                
+            db = await self.get_db()
+            result = await db.users.update_one(
+                {"id": user_id},
+                {
+                    "$set": {
+                        "email_verified": True,
+                        "updated_at": datetime.utcnow()
+                    },
+                    "$unset": {
+                        "email_verification_token": "",
+                        "email_verification_expires": ""
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error verifying email: {e}")
+            return False
+
+    async def increment_failed_login_attempts(self, user_id: str) -> bool:
+        """Increment failed login attempts and lock account if necessary"""
+        try:
+            if not user_id:
+                return False
+                
+            db = await self.get_db()
+            
+            # Get current user
+            user = await self.get_user_by_id(user_id)
+            if not user:
+                return False
+            
+            failed_attempts = user.failed_login_attempts + 1
+            update_data = {
+                "failed_login_attempts": failed_attempts,
+                "updated_at": datetime.utcnow()
+            }
+            
+            # Lock account after 5 failed attempts for 30 minutes
+            if failed_attempts >= 5:
+                lock_until = datetime.utcnow() + timedelta(minutes=30)
+                update_data["account_locked_until"] = lock_until
+            
+            result = await db.users.update_one(
+                {"id": user_id},
+                {"$set": update_data}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error incrementing failed login attempts: {e}")
+            return False
+
+    async def reset_failed_login_attempts(self, user_id: str) -> bool:
+        """Reset failed login attempts"""
+        try:
+            if not user_id:
+                return False
+                
+            db = await self.get_db()
+            result = await db.users.update_one(
+                {"id": user_id},
+                {
+                    "$set": {
+                        "failed_login_attempts": 0,
+                        "updated_at": datetime.utcnow()
+                    },
+                    "$unset": {
+                        "account_locked_until": ""
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error resetting failed login attempts: {e}")
+            return False
+
+    async def update_last_login(self, user_id: str) -> bool:
+        """Update last login timestamp"""
+        try:
+            if not user_id:
+                return False
+                
+            db = await self.get_db()
+            result = await db.users.update_one(
+                {"id": user_id},
+                {
+                    "$set": {
+                        "last_login": datetime.utcnow(),
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"Error updating last login: {e}")
+            return False
 
     async def update_mfa_secret(self, user_id: str, secret: str, backup_codes: List[str]) -> bool:
         """Update MFA secret and backup codes for user"""
