@@ -15,6 +15,12 @@ async def verify_email(verification_data: EmailVerificationConfirm):
     """Verify user email with token"""
     return await auth_controller.verify_email(verification_data)
 
+@router.get("/verify-email/{token}")
+async def verify_email_get(token: str):
+    """Verify user email with token via GET request (for email links)"""
+    verification_data = EmailVerificationConfirm(token=token)
+    return await auth_controller.verify_email(verification_data)
+
 @router.post("/resend-verification")
 async def resend_verification_email(email: str = Query(...)):
     """Resend verification email"""

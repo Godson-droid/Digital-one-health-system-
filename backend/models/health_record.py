@@ -14,22 +14,32 @@ class HealthRecordBase(BaseModel):
 
 class HealthRecordCreate(HealthRecordBase):
     # Enhanced data structure for different record types
-    symptoms: Optional[str] = None
-    diagnosis: Optional[str] = None
-    treatment: Optional[str] = None
-    vital_signs: Optional[Dict[str, Any]] = None
-    lab_results: Optional[Dict[str, Any]] = None
-    medications: Optional[List[str]] = None
-    allergies: Optional[List[str]] = None
+    symptoms: Optional[str] = ""
+    diagnosis: Optional[str] = ""
+    treatment: Optional[str] = ""
+    vital_signs: Optional[Dict[str, Any]] = {}
+    lab_results: Optional[Dict[str, Any]] = {}
+    medications: Optional[List[str]] = []
+    allergies: Optional[List[str]] = []
     # For animals
-    species: Optional[str] = None
-    breed: Optional[str] = None
-    age: Optional[str] = None
+    species: Optional[str] = ""
+    breed: Optional[str] = ""
+    age: Optional[str] = ""
+    weight: Optional[str] = ""
+    vaccination_status: Optional[str] = ""
     # For plants/environment
-    location: Optional[str] = None
-    environmental_factors: Optional[Dict[str, Any]] = None
-    soil_conditions: Optional[str] = None
-    climate_data: Optional[Dict[str, Any]] = None
+    location: Optional[str] = ""
+    environmental_factors: Optional[Dict[str, Any]] = {}
+    soil_conditions: Optional[str] = ""
+    climate_data: Optional[Dict[str, Any]] = {}
+    plant_health_status: Optional[str] = ""
+    growth_stage: Optional[str] = ""
+    # Enhanced identification fields
+    patient_id: Optional[str] = ""
+    patient_name: Optional[str] = ""
+    date_of_birth: Optional[str] = ""
+    gender: Optional[str] = ""
+    contact_info: Optional[str] = ""
 
 class HealthRecordInDB(HealthRecordBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -41,20 +51,29 @@ class HealthRecordInDB(HealthRecordBase):
     previous_hash: Optional[str] = None
     block_number: Optional[int] = None
     # Enhanced fields
-    symptoms: Optional[str] = None
-    diagnosis: Optional[str] = None
-    treatment: Optional[str] = None
-    vital_signs: Optional[Dict[str, Any]] = None
-    lab_results: Optional[Dict[str, Any]] = None
-    medications: Optional[List[str]] = None
-    allergies: Optional[List[str]] = None
-    species: Optional[str] = None
-    breed: Optional[str] = None
-    age: Optional[str] = None
-    location: Optional[str] = None
-    environmental_factors: Optional[Dict[str, Any]] = None
-    soil_conditions: Optional[str] = None
-    climate_data: Optional[Dict[str, Any]] = None
+    symptoms: Optional[str] = ""
+    diagnosis: Optional[str] = ""
+    treatment: Optional[str] = ""
+    vital_signs: Optional[Dict[str, Any]] = {}
+    lab_results: Optional[Dict[str, Any]] = {}
+    medications: Optional[List[str]] = []
+    allergies: Optional[List[str]] = []
+    species: Optional[str] = ""
+    breed: Optional[str] = ""
+    age: Optional[str] = ""
+    weight: Optional[str] = ""
+    vaccination_status: Optional[str] = ""
+    location: Optional[str] = ""
+    environmental_factors: Optional[Dict[str, Any]] = {}
+    soil_conditions: Optional[str] = ""
+    climate_data: Optional[Dict[str, Any]] = {}
+    plant_health_status: Optional[str] = ""
+    growth_stage: Optional[str] = ""
+    patient_id: Optional[str] = ""
+    patient_name: Optional[str] = ""
+    date_of_birth: Optional[str] = ""
+    gender: Optional[str] = ""
+    contact_info: Optional[str] = ""
 
 class HealthRecord(HealthRecordBase):
     id: str
@@ -65,29 +84,32 @@ class HealthRecord(HealthRecordBase):
     blockchain_hash: Optional[str] = None
     is_verified: bool = False
     # Enhanced display fields
-    symptoms: Optional[str] = None
-    diagnosis: Optional[str] = None
-    treatment: Optional[str] = None
-    vital_signs: Optional[Dict[str, Any]] = None
-    species: Optional[str] = None
-    location: Optional[str] = None
+    symptoms: Optional[str] = ""
+    diagnosis: Optional[str] = ""
+    treatment: Optional[str] = ""
+    vital_signs: Optional[Dict[str, Any]] = {}
+    lab_results: Optional[Dict[str, Any]] = {}
+    medications: Optional[List[str]] = []
+    allergies: Optional[List[str]] = []
+    species: Optional[str] = ""
+    breed: Optional[str] = ""
+    age: Optional[str] = ""
+    weight: Optional[str] = ""
+    vaccination_status: Optional[str] = ""
+    location: Optional[str] = ""
+    environmental_factors: Optional[Dict[str, Any]] = {}
+    soil_conditions: Optional[str] = ""
+    climate_data: Optional[Dict[str, Any]] = {}
+    plant_health_status: Optional[str] = ""
+    growth_stage: Optional[str] = ""
+    patient_id: Optional[str] = ""
+    patient_name: Optional[str] = ""
+    date_of_birth: Optional[str] = ""
+    gender: Optional[str] = ""
+    contact_info: Optional[str] = ""
 
 class HealthRecordUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
     is_public: Optional[bool] = None
-    symptoms: Optional[str] = None
-    diagnosis: Optional[str] = None
-    treatment: Optional[str] = None
-    vital_signs: Optional[Dict[str, Any]] = None
-    lab_results: Optional[Dict[str, Any]] = None
-    medications: Optional[List[str]] = None
-    allergies: Optional[List[str]] = None
-    species: Optional[str] = None
-    breed: Optional[str] = None
-    age: Optional[str] = None
-    location: Optional[str] = None
-    environmental_factors: Optional[Dict[str, Any]] = None
-    soil_conditions: Optional[str] = None
-    climate_data: Optional[Dict[str, Any]] = None

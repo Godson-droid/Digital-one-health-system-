@@ -2,7 +2,7 @@ from ..models.health_record import HealthRecordInDB
 from ..models.user import User
 
 def check_record_access(record: HealthRecordInDB, user: User) -> bool:
-    """Check if user has access to read a record"""
+    """Check if user has access to read a record - ENHANCED FOR RESEARCHERS"""
     try:
         if not record or not user:
             return False
@@ -15,8 +15,8 @@ def check_record_access(record: HealthRecordInDB, user: User) -> bool:
         if record.owner_id == user.id:
             return True
         
-        # Public records can be accessed by healthcare providers and researchers
-        if record.is_public and user.role in ["healthcare_provider", "researcher"]:
+        # ENHANCED: Public records can be accessed by healthcare providers, researchers, and individuals
+        if record.is_public and user.role in ["healthcare_provider", "researcher", "individual"]:
             return True
         
         return False

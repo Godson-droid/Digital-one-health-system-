@@ -28,8 +28,9 @@ class EmailService:
         """Send email verification email"""
         try:
             # Create verification URL
-            base_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-            verification_url = f"{base_url}/verify-email?token={token}"
+            # Use deployed backend URL for verification
+            backend_url = os.environ.get('BACKEND_URL', 'https://digital-one-health-system-cjum.onrender.com')
+            verification_url = f"{backend_url}/api/auth/verify-email/{token}"
             
             # Create email content
             subject = "Digital One Health - Email Verification Required"

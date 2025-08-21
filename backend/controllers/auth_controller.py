@@ -148,6 +148,12 @@ class AuthController:
     async def verify_email(self, verification_data: EmailVerificationConfirm) -> dict:
         """Verify user email with token"""
         try:
+            if not verification_data.token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification token is required"
+                )
+            
             user = await self.user_service.get_user_by_verification_token(verification_data.token)
             if not user:
                 raise HTTPException(
@@ -157,9 +163,17 @@ class AuthController:
             
             # Check if token is expired
             if user.email_verification_expires and user.email_verification_expires < datetime.utcnow():
+                # Generate new token for expired ones
+                new_token = self.email_service.generate_verification_token()
+                new_expires = self.email_service.generate_verification_expiry()
+                await self.user_service.set_email_verification_token(user.id, new_token, new_expires)
+                
+                # Send new verification email
+                await self.email_service.send_verification_email(user.email, user.username, new_token)
+                
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Verification token has expired. Please request a new one."
+                    detail="Verification token has expired. A new verification email has been sent to your email address."
                 )
             
             # Verify email
