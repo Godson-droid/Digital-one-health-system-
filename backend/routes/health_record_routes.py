@@ -38,7 +38,7 @@ async def update_health_record(
     update_data: HealthRecordUpdate,
     current_user: User = Depends(auth_controller.get_current_user)
 ):
-    """Update a health record"""
+    """Update a health record - RESTRICTED: Only original creator can modify"""
     return await health_record_controller.update_health_record(record_id, update_data, current_user)
 
 @router.put("/{record_id}/privacy")
@@ -47,7 +47,7 @@ async def update_record_privacy(
     is_public: bool = Query(...),
     current_user: User = Depends(auth_controller.get_current_user)
 ):
-    """Update privacy settings for a record"""
+    """Update privacy settings for a record - RESTRICTED: Only original creator can change"""
     return await health_record_controller.update_record_privacy(record_id, is_public, current_user)
 
 @router.get("/{record_id}/verify", response_model=dict)

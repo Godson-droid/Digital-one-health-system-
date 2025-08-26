@@ -132,7 +132,7 @@ class HealthRecordController:
             )
 
     async def update_health_record(self, record_id: str, update_data: HealthRecordUpdate, current_user: User) -> dict:
-        """Update a health record and log to blockchain - ONLY CREATOR CAN MODIFY"""
+        """Update a health record and log to blockchain - STRICT: ONLY ORIGINAL CREATOR CAN MODIFY"""
         try:
             record = await self.health_record_service.get_record_by_id(record_id)
             if record is None:
@@ -141,11 +141,12 @@ class HealthRecordController:
                     detail="Record not found"
                 )
 
-            # CRITICAL: Check modification permissions - ONLY CREATOR CAN MODIFY
+            # CRITICAL: Check modification permissions - ONLY ORIGINAL CREATOR CAN MODIFY
+            # This prevents ANY unauthorized modifications, even by admins
             if not can_modify_record(record, current_user):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied - records can only be modified by their original creator"
+                    detail="Access denied - records can only be modified by their original creator. This ensures data integrity and prevents unauthorized changes."
                 )
 
             # Update record
@@ -180,7 +181,7 @@ class HealthRecordController:
             )
 
     async def update_record_privacy(self, record_id: str, is_public: bool, current_user: User) -> dict:
-        """Update privacy settings for a record - ONLY CREATOR CAN CHANGE"""
+        """Update privacy settings for a record - STRICT: ONLY ORIGINAL CREATOR CAN CHANGE"""
         try:
             record = await self.health_record_service.get_record_by_id(record_id)
             if record is None:
@@ -189,11 +190,12 @@ class HealthRecordController:
                     detail="Record not found"
                 )
 
-            # CRITICAL: Check privacy change permissions - ONLY CREATOR CAN CHANGE
+            # CRITICAL: Check privacy change permissions - ONLY ORIGINAL CREATOR CAN CHANGE
+            # This prevents unauthorized privacy changes by anyone other than the creator
             if not can_change_privacy(record, current_user):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied - privacy can only be changed by the record creator"
+                    detail="Access denied - privacy settings can only be changed by the original record creator"
                 )
 
             # Update privacy

@@ -131,6 +131,13 @@ class AuthController:
                 detail=f"Registration failed: {str(e)}"
             )
 
+        # Force MFA setup after registration
+        return {
+            "message": "User registered successfully. MFA setup is required for account security.",
+            "user_id": user.id,
+            "mfa_required": True
+        }
+
     async def login_user(self, login_data: UserLogin) -> Token:
         """Authenticate user and return token"""
         try:
@@ -224,7 +231,7 @@ class AuthController:
             secret = pyotp.random_base32()
 
             # Generate provisioning URI for TOTP with standard 30-second interval
-            totp = pyotp.TOTP(secret, interval=30)
+            totp = pyotp.TOTP(secret)
             provisioning_uri = totp.provisioning_uri(
                 name=current_user.email,
                 issuer_name="Digital One Health"

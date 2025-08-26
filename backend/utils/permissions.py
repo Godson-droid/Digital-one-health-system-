@@ -25,17 +25,19 @@ def check_record_access(record: HealthRecordInDB, user: User) -> bool:
         return False
 
 def can_modify_record(record: HealthRecordInDB, user: User) -> bool:
-    """Check if user can modify a record - ONLY CREATOR CAN MODIFY"""
+    """Check if user can modify a record - STRICT: ONLY ORIGINAL CREATOR CAN MODIFY"""
     try:
         if not record or not user:
             return False
             
         # CRITICAL: Only the original creator can modify their records
-        # This ensures records cannot be modified by anyone who didn't create them
+        # This ensures complete data integrity - NO ONE else can modify records
+        # Not even admins can modify records they didn't create
         if record.owner_id == user.id and record.created_by == user.id:
             return True
         
-        # NO OTHER PERMISSIONS - Not even admins can modify records they didn't create
+        # ABSOLUTE RESTRICTION: No other permissions granted
+        # This prevents unauthorized modifications and maintains data integrity
         return False
     except Exception as e:
         print(f"Error checking modify permissions: {e}")
@@ -69,19 +71,17 @@ def can_view_record_details(record: HealthRecordInDB, user: User) -> bool:
         return False
 
 def can_change_privacy(record: HealthRecordInDB, user: User) -> bool:
-    """Check if user can change record privacy settings"""
+    """Check if user can change record privacy settings - STRICT: ONLY ORIGINAL CREATOR"""
     try:
         if not record or not user:
             return False
             
-        # Admin can change privacy for all records
-        if user.role == "admin":
-            return True
-        
-        # ONLY the original owner/creator can change privacy
+        # CRITICAL: ONLY the original owner/creator can change privacy
+        # Removed admin override to maintain strict data ownership
         if record.owner_id == user.id and record.created_by == user.id:
             return True
         
+        # NO OTHER PERMISSIONS - Privacy can only be changed by original creator
         return False
     except Exception as e:
         print(f"Error checking privacy change permissions: {e}")

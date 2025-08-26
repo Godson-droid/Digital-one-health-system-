@@ -98,12 +98,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         raise
 
 def verify_mfa_token(secret: str, token: str) -> bool:
-    """Verify MFA token with standard 30-second window"""
+    """Verify MFA token with standard 30-second window and proper validation"""
     try:
         if not secret or not token:
             return False
-        totp = pyotp.TOTP(secret, interval=30)
-        return totp.verify(token)
+        
+        # Create TOTP instance with standard settings
+        totp = pyotp.TOTP(secret)
+        
+        # Verify with a window of 1 (allows for 30 seconds before/after)
+        return totp.verify(token, valid_window=1)
     except Exception as e:
         print(f"Error verifying MFA token: {e}")
         return False
