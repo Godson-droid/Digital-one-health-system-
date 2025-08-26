@@ -132,7 +132,7 @@ class HealthRecordController:
             )
 
     async def update_health_record(self, record_id: str, update_data: HealthRecordUpdate, current_user: User) -> dict:
-        """Update a health record and log to blockchain - STRICT PERMISSIONS"""
+        """Update a health record and log to blockchain - ONLY CREATOR CAN MODIFY"""
         try:
             record = await self.health_record_service.get_record_by_id(record_id)
             if record is None:
@@ -141,11 +141,11 @@ class HealthRecordController:
                     detail="Record not found"
                 )
 
-            # CRITICAL: Check modification permissions - ONLY OWNER CAN MODIFY
+            # CRITICAL: Check modification permissions - ONLY CREATOR CAN MODIFY
             if not can_modify_record(record, current_user):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied - you can only modify records you created"
+                    detail="Access denied - records can only be modified by their original creator"
                 )
 
             # Update record
@@ -180,7 +180,7 @@ class HealthRecordController:
             )
 
     async def update_record_privacy(self, record_id: str, is_public: bool, current_user: User) -> dict:
-        """Update privacy settings for a record - STRICT PERMISSIONS"""
+        """Update privacy settings for a record - ONLY CREATOR CAN CHANGE"""
         try:
             record = await self.health_record_service.get_record_by_id(record_id)
             if record is None:
@@ -189,11 +189,11 @@ class HealthRecordController:
                     detail="Record not found"
                 )
 
-            # CRITICAL: Check privacy change permissions - ONLY OWNER CAN CHANGE
+            # CRITICAL: Check privacy change permissions - ONLY CREATOR CAN CHANGE
             if not can_change_privacy(record, current_user):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied - you can only change privacy for records you created"
+                    detail="Access denied - privacy can only be changed by the record creator"
                 )
 
             # Update privacy

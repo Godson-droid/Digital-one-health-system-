@@ -26,7 +26,7 @@ DB_NAME = os.environ.get('DB_NAME', 'digital_one_health')
 BLOCKCHAIN_DIFFICULTY = int(os.environ.get('BLOCKCHAIN_DIFFICULTY', '1'))
 
 # Security Configuration
-MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '90'))  # seconds
+MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '30'))  # seconds - standard TOTP interval
 
 # Application Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'

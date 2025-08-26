@@ -25,21 +25,17 @@ def check_record_access(record: HealthRecordInDB, user: User) -> bool:
         return False
 
 def can_modify_record(record: HealthRecordInDB, user: User) -> bool:
-    """Check if user can modify a record - STRICT PERMISSIONS"""
+    """Check if user can modify a record - ONLY CREATOR CAN MODIFY"""
     try:
         if not record or not user:
             return False
             
-        # Admin can modify all records
-        if user.role == "admin":
-            return True
-        
-        # CRITICAL: Only the original owner/creator can modify their own records
-        # Both owner_id and created_by must match the current user
+        # CRITICAL: Only the original creator can modify their records
+        # This ensures records cannot be modified by anyone who didn't create them
         if record.owner_id == user.id and record.created_by == user.id:
             return True
         
-        # NO OTHER PERMISSIONS - Individual users cannot modify records they didn't create
+        # NO OTHER PERMISSIONS - Not even admins can modify records they didn't create
         return False
     except Exception as e:
         print(f"Error checking modify permissions: {e}")
