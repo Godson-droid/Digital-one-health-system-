@@ -108,35 +108,37 @@ class HealthRecordService:
             return None
 
     async def get_records_for_user(self, user: User) -> List[HealthRecordInDB]:
-        """Get health records based on user role and permissions - ENHANCED FOR RESEARCHERS"""
+        """Get health records based on user role and permissions - STRICT ACCESS CONTROL"""
         try:
             db = await self.get_db()
             
-            # Build query based on user role - RESEARCHERS GET FULL ACCESS TO PUBLIC RECORDS
+            # Build query based on user role - STRICT ROLE-BASED ACCESS
             query = {}
             if user.role == "individual":
-                # Individual users can see:
-                # 1. Their own records (both public and private)
-                # 2. Public records from other users
+                # Individual users can ONLY see their own records
+                query = {
+                    "owner_id": user.id  # Only own records
+                }
+            elif user.role == "healthcare_provider":
+                # Healthcare providers can see:
+                # 1. Their own records
+                # 2. Public records from others
                 query = {
                     "$or": [
                         {"owner_id": user.id},  # Own records
                         {"is_public": True}     # Public records from others
                     ]
                 }
-            elif user.role == "healthcare_provider":
-                # Healthcare providers can see:
-                # 1. Their own records
-                # 2. All public records
+            elif user.role == "researcher":
+                # Researchers can see:
+                # 1. Their own records (if any)
+                # 2. Public records from others
                 query = {
                     "$or": [
                         {"owner_id": user.id},  # Own records
-                        {"is_public": True}     # All public records
+                        {"is_public": True}     # Public records from others
                     ]
                 }
-            elif user.role == "researcher":
-                # Researchers can see ALL public records with FULL DATA ACCESS
-                query = {"is_public": True}
             # Admin can see all records (no query filter)
             
             print(f"Query for user {user.username} (role: {user.role}): {query}")
@@ -151,7 +153,7 @@ class HealthRecordService:
             for record_data in records:
                 if record_data.get("data") is not None and record_data["data"].get("encrypted") is not None:
                     try:
-                        # ENHANCED: Researchers get FULL access to public record data
+                        # Decrypt data for authorized users only
                         if (user.role == "admin" or 
                             record_data["owner_id"] == user.id or
                             (record_data["is_public"] and user.role in ["healthcare_provider", "researcher", "individual"])):

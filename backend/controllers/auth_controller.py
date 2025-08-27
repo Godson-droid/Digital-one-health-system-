@@ -273,6 +273,20 @@ class AuthController:
     async def enable_mfa(self, mfa_token: str, current_user: User) -> dict:
         """Enable MFA for user"""
         try:
+            if not mfa_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="MFA token is required"
+                )
+            
+            # Clean and validate token format
+            clean_token = ''.join(filter(str.isdigit, str(mfa_token)))
+            if len(clean_token) != 6:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="MFA token must be exactly 6 digits"
+                )
+            
             user = await self.user_service.get_user_by_id(current_user.id)
             if not user or not user.mfa_secret:
                 raise HTTPException(
@@ -280,10 +294,10 @@ class AuthController:
                     detail="MFA not set up"
                 )
 
-            if not verify_mfa_token(user.mfa_secret, mfa_token):
+            if not verify_mfa_token(user.mfa_secret, clean_token):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid MFA token"
+                    detail="Invalid MFA token. Please check your authenticator app and try again."
                 )
 
             await self.user_service.enable_mfa(current_user.id)
