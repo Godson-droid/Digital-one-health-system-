@@ -98,22 +98,42 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         raise
 
 def verify_mfa_token(secret: str, token: str) -> bool:
-    """Verify MFA token with standard 30-second window and enhanced validation"""
+    """Verify MFA token with enhanced validation and clock drift tolerance"""
     try:
         if not secret or not token:
+            print(f"MFA verification failed: missing secret or token")
             return False
         
         # Clean the token - remove any spaces or non-digit characters
         clean_token = ''.join(filter(str.isdigit, str(token)))
         
         if len(clean_token) != 6:
+            print(f"MFA verification failed: token length {len(clean_token)}, expected 6")
             return False
         
-        # Create TOTP instance with standard settings
+        # Create TOTP instance with standard 30-second interval
         totp = pyotp.TOTP(secret)
         
-        # Verify with a window of 2 (allows for 60 seconds before/after for better compatibility)
-        return totp.verify(clean_token, valid_window=2)
+        # Enhanced verification with multiple windows for clock drift
+        # Try current time window first
+        if totp.verify(clean_token, valid_window=0):
+            print(f"MFA verification successful: current window")
+            return True
+            
+        # Try with extended window for clock drift (±90 seconds)
+        if totp.verify(clean_token, valid_window=3):
+            print(f"MFA verification successful: extended window")
+            return True
+            
+        # Debug information
+        current_token = totp.now()
+        print(f"MFA verification failed:")
+        print(f"  - Provided token: {clean_token}")
+        print(f"  - Expected token: {current_token}")
+        print(f"  - Secret length: {len(secret)}")
+        print(f"  - Time window checked: ±90 seconds")
+        
+        return False
     except Exception as e:
         print(f"Error verifying MFA token: {e}")
         return False

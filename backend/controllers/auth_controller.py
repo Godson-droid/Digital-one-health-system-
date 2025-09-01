@@ -234,7 +234,7 @@ class AuthController:
             totp = pyotp.TOTP(secret)
             provisioning_uri = totp.provisioning_uri(
                 name=current_user.email,
-                issuer_name="Digital One Health"
+                issuer_name="Digital One Health System"
             )
 
             # Generate QR code from the provisioning URI

@@ -27,16 +27,23 @@ BLOCKCHAIN_DIFFICULTY = int(os.environ.get('BLOCKCHAIN_DIFFICULTY', '1'))
 
 # Security Configuration
 MFA_INTERVAL = int(os.environ.get('MFA_INTERVAL', '30'))  # seconds - standard TOTP interval
+MFA_WINDOW = int(os.environ.get('MFA_WINDOW', '2'))  # TOTP validation window for clock drift
 
 # Application Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# CORS Configuration - CRITICAL FIX for deployment
-CORS_ORIGINS = ["*"]  # Allow all origins for deployment
+# CORS Configuration - ENHANCED for deployment
+CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000", 
+    "https://digital-one-health-system-cjum.onrender.com",
+    "https://*.onrender.com",
+    "*"  # Fallback for deployment
+]
 
-# Timeout Configuration - ENHANCED for deployment stability
-REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '45'))  # seconds - increased for deployment
-DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '15'))  # seconds - optimized for cold starts
+# Timeout Configuration - OPTIMIZED for deployment stability
+REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '60'))  # seconds - increased for deployment
+DATABASE_TIMEOUT = int(os.environ.get('DATABASE_TIMEOUT', '30'))  # seconds - optimized for cold starts
 
 # Server Configuration
 HOST = os.environ.get('HOST', '0.0.0.0')
